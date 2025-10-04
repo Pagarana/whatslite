@@ -1,0 +1,19 @@
+{
+  "rules": {
+    ".read": true,
+    ".write": true,
+    "users": {
+      ".indexOn": ["nickname", "isOnline"]
+    },
+    "messages": {
+      ".indexOn": ["to", "from", "chatRoomId", "timestamp"]
+    },
+    "chatRooms": {
+      ".indexOn": ["participants", "lastMessage"]
+    },
+    "debug_test": {
+      ".read": true,
+      ".write": true
+    }
+  }
+}

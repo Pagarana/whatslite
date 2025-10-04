@@ -1,0 +1,365 @@
+{
+  "debug_test": "test_1759078313872",
+  "messages": {
+    "-OaCIaQlVFxHduRiQqD_": {
+      "chatRoomId": "ben_sen",
+      "from": "ben",
+      "isRead": true,
+      "message": "Nasılsın sen bakim",
+      "senderLanguage": "tr",
+      "timestamp": 1759012348356,
+      "to": "sen"
+    },
+    "-OaCIfjOWr3IUGIq9WEe": {
+      "chatRoomId": "ben_sen",
+      "from": "ben",
+      "isRead": true,
+      "message": "Gel hele buraya",
+      "senderLanguage": "tr",
+      "timestamp": 1759012370092,
+      "to": "sen"
+    },
+    "-OaCIrKKXYt15V2y2acC": {
+      "chatRoomId": "ben_sen",
+      "from": "ben",
+      "isRead": true,
+      "message": "Seni seviyorum",
+      "senderLanguage": "tr",
+      "timestamp": 1759012417576,
+      "to": "sen"
+    },
+    "-OaCIttvU--w0VaDgF2W": {
+      "chatRoomId": "ben_sen",
+      "from": "ben",
+      "isRead": true,
+      "message": "Sen benim canımsın",
+      "senderLanguage": "tr",
+      "timestamp": 1759012428110,
+      "to": "sen"
+    },
+    "-OaCJBTK44ewzzl9ZLoo": {
+      "chatRoomId": "ben_sen",
+      "from": "ben",
+      "isRead": true,
+      "message": "Deli",
+      "senderLanguage": "tr",
+      "timestamp": 1759012504168,
+      "to": "sen"
+    },
+    "-OaCJCM-l0xYmncc1VoS": {
+      "chatRoomId": "ben_sen",
+      "from": "ben",
+      "isRead": true,
+      "message": "Uyu artık",
+      "senderLanguage": "tr",
+      "timestamp": 1759012507795,
+      "to": "sen"
+    },
+    "-OaCKYPePYK4KLkg2omp": {
+      "chatRoomId": "ben_sen",
+      "from": "ben",
+      "isRead": true,
+      "message": "Orda mısın",
+      "senderLanguage": "tr",
+      "timestamp": 1759012860285,
+      "to": "sen"
+    },
+    "-OaFrXVtaKim-_JFsaLH": {
+      "chatRoomId": "sen_senha",
+      "from": "senha",
+      "isRead": true,
+      "message": "ne  yapyorsun",
+      "senderLanguage": "en",
+      "timestamp": 1759072102323,
+      "to": "sen"
+    },
+    "-OaFrzUF3_o6zHfMR7Ev": {
+      "chatRoomId": "ben_senha",
+      "from": "senha",
+      "isRead": true,
+      "message": "ne yapyorsun",
+      "senderLanguage": "en",
+      "timestamp": 1759072220979,
+      "to": "ben"
+    },
+    "-OaFsISUHYzf8nx5nvqE": {
+      "chatRoomId": "ben_senha",
+      "from": "ben",
+      "isRead": true,
+      "message": "Bişe yok sen",
+      "senderLanguage": "tr",
+      "timestamp": 1759072301457,
+      "to": "senha"
+    },
+    "-OaFsLhGcLPKQHpJu3vR": {
+      "chatRoomId": "ben_senha",
+      "from": "senha",
+      "isRead": true,
+      "message": "taklyorum burda",
+      "senderLanguage": "en",
+      "timestamp": 1759072316083,
+      "to": "ben"
+    },
+    "-OaFxSyXuXckkWwmHYJI": {
+      "chatRoomId": "ben_senha",
+      "from": "ben",
+      "isRead": false,
+      "message": "Askıım",
+      "senderLanguage": "tr",
+      "timestamp": 1759073655252,
+      "to": "senha"
+    },
+    "-OaG-KogU4IIucwNGuLx": {
+      "chatRoomId": "Kadir_laptop",
+      "from": "Kadir",
+      "isRead": true,
+      "message": "Nasılsın",
+      "senderLanguage": "tr",
+      "timestamp": 1759074408276,
+      "to": "laptop"
+    },
+    "-OaG3SLHJtBEPrLvngmy": {
+      "chatRoomId": "ben_laptop2",
+      "from": "ben",
+      "isRead": true,
+      "message": "Nasılsın",
+      "senderLanguage": "tr",
+      "timestamp": 1759075487669,
+      "to": "laptop2"
+    },
+    "-OaG3VsZOEWzh4WO-Vic": {
+      "chatRoomId": "ben_laptop2",
+      "from": "ben",
+      "isRead": true,
+      "message": "Nasılsın",
+      "senderLanguage": "tr",
+      "timestamp": 1759075502151,
+      "to": "laptop2"
+    },
+    "-OaG3Yz-7oiJHXTPf-Js": {
+      "chatRoomId": "ben_laptop2",
+      "from": "laptop2",
+      "isRead": true,
+      "message": "ne yapyorsun",
+      "senderLanguage": "en",
+      "timestamp": 1759075516147,
+      "to": "ben"
+    },
+    "-OaG45ctot-TqBHIGoKO": {
+      "chatRoomId": "beno_den",
+      "from": "beno",
+      "isRead": true,
+      "message": "Nasılsın",
+      "senderLanguage": "tr",
+      "timestamp": 1759075656790,
+      "to": "den"
+    },
+    "-OaG48-lKthosk09b7TZ": {
+      "chatRoomId": "beno_den",
+      "from": "beno",
+      "isRead": true,
+      "message": "Cevap yaz",
+      "senderLanguage": "tr",
+      "timestamp": 1759075666511,
+      "to": "den"
+    },
+    "-OaG4BfnaNuDcx-tFtDy": {
+      "chatRoomId": "beno_den",
+      "from": "beno",
+      "isRead": true,
+      "message": "Hry",
+      "senderLanguage": "tr",
+      "timestamp": 1759075681553,
+      "to": "den"
+    },
+    "-OaG4cFNOvHS65luuzN6": {
+      "chatRoomId": "aaa_bbb",
+      "from": "aaa",
+      "isRead": true,
+      "message": "Selam",
+      "senderLanguage": "tr",
+      "timestamp": 1759075794482,
+      "to": "bbb"
+    },
+    "-OaG67eR7Mmyq_mMX1w1": {
+      "chatRoomId": "ccc_ddd",
+      "from": "ddd",
+      "isRead": true,
+      "message": "Selam",
+      "senderLanguage": "tr",
+      "timestamp": 1759076189371,
+      "to": "ccc"
+    },
+    "-OaG6AMCWwXE25hDsRLP": {
+      "chatRoomId": "ccc_ddd",
+      "from": "ccc",
+      "isRead": true,
+      "message": "hello",
+      "senderLanguage": "en",
+      "timestamp": 1759076201690,
+      "to": "ddd"
+    },
+    "-OaG7Z_FE_xeb3FWrMa_": {
+      "chatRoomId": "ben_laptop",
+      "from": "ben",
+      "isRead": true,
+      "message": "Nasılsın",
+      "senderLanguage": "tr",
+      "timestamp": 1759076565866,
+      "to": "laptop"
+    },
+    "-OaG7ey3gALv9sjm98nA": {
+      "chatRoomId": "ben_laptop",
+      "from": "laptop",
+      "isRead": true,
+      "message": "hello",
+      "senderLanguage": "tr",
+      "timestamp": 1759076593311,
+      "to": "ben"
+    },
+    "-OaG9vuzgWRPUS_FG9Ld": {
+      "chatRoomId": "ben_sen",
+      "from": "ben",
+      "isRead": true,
+      "message": "Nasılsın",
+      "senderLanguage": "tr",
+      "timestamp": 1759077185758,
+      "to": "sen"
+    },
+    "-OaG9xHgWhRS71gw25Aq": {
+      "chatRoomId": "ben_sen",
+      "from": "ben",
+      "isRead": true,
+      "message": "Ne yapıyorsun",
+      "senderLanguage": "tr",
+      "timestamp": 1759077191371,
+      "to": "sen"
+    },
+    "-OaGA-mkszv2Yh601Wdn": {
+      "chatRoomId": "ben_sen",
+      "from": "sen",
+      "isRead": true,
+      "message": "gel",
+      "senderLanguage": "en",
+      "timestamp": 1759077206963,
+      "to": "ben"
+    },
+    "-OaGA4T3s8--hpV9H2y_": {
+      "chatRoomId": "ben_sen",
+      "from": "sen",
+      "isRead": true,
+      "message": "hello",
+      "senderLanguage": "en",
+      "timestamp": 1759077226119,
+      "to": "ben"
+    },
+    "-OaGA7ooK2LLWdMavvhb": {
+      "chatRoomId": "ben_sen",
+      "from": "sen",
+      "isRead": true,
+      "message": "I like you",
+      "senderLanguage": "en",
+      "timestamp": 1759077239862,
+      "to": "ben"
+    },
+    "-OaGAFA6aZPRkQqaZsbQ": {
+      "chatRoomId": "ben_sen",
+      "from": "sen",
+      "isRead": true,
+      "message": "cok tatlsn",
+      "senderLanguage": "en",
+      "timestamp": 1759077269962,
+      "to": "ben"
+    },
+    "-OaGAIi4_JxxWFe023PE": {
+      "chatRoomId": "ben_sen",
+      "from": "ben",
+      "isRead": true,
+      "message": "Sen ha",
+      "senderLanguage": "tr",
+      "timestamp": 1759077283236,
+      "to": "sen"
+    },
+    "-OaGAKh4fdZCJUO_TYQc": {
+      "chatRoomId": "ben_sen",
+      "from": "sen",
+      "isRead": true,
+      "message": "you are very seetly",
+      "senderLanguage": "en",
+      "timestamp": 1759077292616,
+      "to": "ben"
+    },
+    "-OaGAOWgFbHToYjsu9oZ": {
+      "chatRoomId": "ben_sen",
+      "from": "sen",
+      "isRead": true,
+      "message": "how are you",
+      "senderLanguage": "en",
+      "timestamp": 1759077308271,
+      "to": "ben"
+    },
+    "-OaGBzvOSP6i2J5vQlWh": {
+      "chatRoomId": "ben_sen",
+      "from": "sen",
+      "isRead": true,
+      "message": "Nasılsın",
+      "senderLanguage": "tr",
+      "timestamp": 1759077726440,
+      "to": "ben"
+    },
+    "-OaGC22jj0hgP770loDy": {
+      "chatRoomId": "ben_sen",
+      "from": "sen",
+      "isRead": true,
+      "message": "Nasılsın",
+      "senderLanguage": "tr",
+      "timestamp": 1759077739262,
+      "to": "ben"
+    },
+    "-OaGC3pg58XKriGLOOUR": {
+      "chatRoomId": "ben_sen",
+      "from": "ben",
+      "isRead": true,
+      "message": "hello",
+      "senderLanguage": "en",
+      "timestamp": 1759077747821,
+      "to": "sen"
+    },
+    "-OaGEHsC_Lm_FWYo5DGV": {
+      "chatRoomId": "ben_sen",
+      "from": "ben",
+      "isRead": true,
+      "message": "Nasılsın",
+      "senderLanguage": "tr",
+      "timestamp": 1759078328384,
+      "to": "sen"
+    },
+    "-OaGELI6_P-XlzCnSH1d": {
+      "chatRoomId": "ben_sen",
+      "from": "sen",
+      "isRead": true,
+      "message": "hello",
+      "senderLanguage": "en",
+      "timestamp": 1759078343616,
+      "to": "ben"
+    },
+    "-OaGGvFAgdd-T5m2kZqy": {
+      "chatRoomId": "ben_sen",
+      "from": "ben",
+      "isRead": true,
+      "message": "Sen",
+      "senderLanguage": "tr",
+      "timestamp": 1759079018102,
+      "to": "sen"
+    },
+    "-OaGGxXY1ruUXdvtrDaS": {
+      "chatRoomId": "ben_sen",
+      "from": "sen",
+      "isRead": true,
+      "message": "naslsn",
+      "senderLanguage": "en",
+      "timestamp": 1759079028765,
+      "to": "ben"
+    }
+  }
+}
