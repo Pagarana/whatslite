@@ -1,346 +1,299 @@
 package com.whatslite.ui;
 
-import android.app.AlertDialog;
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.text.TextUtils;
-import android.util.Log;
-import android.view.MenuItem;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
 import android.widget.EditText;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.Toast;
+import android.widget.TextView;
 
+import androidx.annotation.NonNull;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.appcompat.widget.Toolbar;
+import androidx.lifecycle.LiveData;
+import androidx.recyclerview.widget.DividerItemDecoration;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
+
 import com.whatslite.R;
-import com.whatslite.adapter.ContactsAdapter;
 import com.whatslite.database.ChatDatabase;
-import com.whatslite.database.ChatRoomDao;
 import com.whatslite.database.ContactDao;
-import com.whatslite.database.UserDao;
-import com.whatslite.model.ChatRoom;
 import com.whatslite.model.Contact;
 import com.whatslite.service.FirebaseManager;
 
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 
+/**
+ * Kişiler ekranı (SON HAL):
+ *  - Liste YEREL Room tablosundan gelir (LiveData ile anında güncellenir).
+ *  - Firebase /users yalnızca durum (online/dil) zenginleştirmesi için okunur.
+ *  - Böylece kişi ekleyince ANINDA görünür; karşı taraf daha eklememiş olsa bile.
+ */
 public class ContactsActivity extends AppCompatActivity implements FirebaseManager.FirebaseListener {
 
-    private static final String TAG = "ContactsActivity";
+    private RecyclerView rv;
+    private View emptyState;
+    private FloatingActionButton fabAdd;
 
-    private RecyclerView recyclerContacts;
-    private LinearLayout emptyStateLayout;
-    private FloatingActionButton fabAddContact;
+    private UsersAdapter adapter;
 
     private ContactDao contactDao;
-    private UserDao userDao;
-    private ChatRoomDao chatRoomDao;
+    private FirebaseManager fm;
 
-    private ContactsAdapter contactsAdapter;
-    private SharedPreferences prefs;
-    private String myNickname;
+    // Yerel veriler (LiveData ile güncellenir)
+    private List<Contact> localContacts = new ArrayList<>();
 
-    private FirebaseManager firebaseManager;
-    private List<FirebaseManager.ChatUser> firebaseUsers = new ArrayList<>();
-    private List<Contact> lastRenderedContacts = new ArrayList<>();
+    // Firebase durum zenginleştirmesi için: nick -> user
+    private final Map<String, FirebaseManager.ChatUser> usersByNick = new HashMap<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_contacts);
 
-        // ---- Prefs & nickname ----
-        prefs = getSharedPreferences("whatslite_prefs", MODE_PRIVATE);
-        myNickname = prefs.getString("nickname", "");
-        if (TextUtils.isEmpty(myNickname)) {
-            myNickname = "user_" + System.currentTimeMillis();
-            prefs.edit().putString("nickname", myNickname).apply();
-        }
+        rv         = findViewById(R.id.recyclerContacts);
+        emptyState = findViewById(R.id.emptyStateLayout);
+        fabAdd     = findViewById(R.id.fabAddContact);
 
-        // ---- UI ----
-        initViews();
-        initDatabase();
-        setupRecyclerView();
-        observeContacts();
+        LinearLayoutManager lm = new LinearLayoutManager(this);
+        rv.setLayoutManager(lm);
+        rv.addItemDecoration(new DividerItemDecoration(this, lm.getOrientation()));
 
-        // ---- Firebase ----
-        firebaseManager = FirebaseManager.getInstance();
-        firebaseManager.setContext(this);
-        firebaseManager.addListener(this);
-        firebaseManager.ensureUsersNode(myNickname, "tr");
-        firebaseManager.startUsersListener();
-    }
+        adapter = new UsersAdapter(nick -> openChat(nick));
+        rv.setAdapter(adapter);
 
-    private void initViews() {
-        Toolbar toolbar = findViewById(R.id.toolbar);
-        setSupportActionBar(toolbar);
-        if (getSupportActionBar() != null) {
-            getSupportActionBar().setDisplayHomeAsUpEnabled(true);
-        }
+        // DB
+        contactDao = ChatDatabase.get(this).contactDao();
 
-        recyclerContacts = findViewById(R.id.recyclerContacts);
-        emptyStateLayout = findViewById(R.id.emptyStateLayout);
-        fabAddContact = findViewById(R.id.fabAddContact);
+        // Firebase
+        fm = FirebaseManager.getInstance();
+        fm.setContext(this);
+        fm.addListener(this);
+        fm.startUsersListener(); // sadece durum için (online/lang)
 
-        fabAddContact.setOnClickListener(v -> showAddContactDialog());
-    }
-
-    private void initDatabase() {
-        ChatDatabase db = ChatDatabase.getDatabase(this);
-        contactDao = db.contactDao();
-        userDao = db.userDao();           // Şimdilik kullanılmıyor; ilerde kullanılabilir.
-        chatRoomDao = db.chatRoomDao();
-    }
-
-    private void setupRecyclerView() {
-        recyclerContacts.setLayoutManager(new LinearLayoutManager(this));
-        contactsAdapter = new ContactsAdapter(this::onContactLongClick, this::onContactClick);
-        recyclerContacts.setAdapter(contactsAdapter);
-    }
-
-    private void observeContacts() {
-        // 1) Önce ChatRoom'lardan Contact üret
-        chatRoomDao.getChatRoomsForUser(myNickname).observe(this, chatRooms -> {
-            if (chatRooms != null && !chatRooms.isEmpty()) {
-                createContactsFromChatRooms(chatRooms);
-            } else {
-                Log.d(TAG, "No chat rooms found");
-            }
+        // Yerel Contact listesini reaktif izle -> anında listeyi yenile
+        LiveData<List<Contact>> live = contactDao.getAllContacts();
+        live.observe(this, contacts -> {
+            localContacts = (contacts == null) ? new ArrayList<>() : contacts;
+            rebuildAndSubmit(); // Firebase durum bilgisiyle zenginleştir
         });
 
-        // 2) Sonra Contact DB'sini dinle
-        contactDao.getAllContacts().observe(this, contacts -> {
-            if (contacts != null && !contacts.isEmpty()) {
-                updateContactsWithOnlineStatus(contacts);
-                emptyStateLayout.setVisibility(LinearLayout.GONE);
-                recyclerContacts.setVisibility(RecyclerView.VISIBLE);
-                Log.d(TAG, "Loaded " + contacts.size() + " contacts from database");
-            } else {
-                emptyStateLayout.setVisibility(LinearLayout.VISIBLE);
-                recyclerContacts.setVisibility(RecyclerView.GONE);
-                Log.d(TAG, "No contacts in database");
-            }
-        });
+        // Kişi ekle
+        fabAdd.setOnClickListener(v -> showAddContactDialog());
     }
 
-    private void createContactsFromChatRooms(List<ChatRoom> chatRooms) {
-        new Thread(() -> {
-            List<Contact> contacts = new ArrayList<>();
-
-            for (ChatRoom chatRoom : chatRooms) {
-                String otherUserNickname = chatRoom.getOtherParticipant(myNickname);
-
-                Contact existingContact = contactDao.getContactByNickname(otherUserNickname);
-                if (existingContact == null) {
-                    Contact newContact = new Contact(otherUserNickname, null, "tr");
-                    newContact.lastSeenDate = chatRoom.lastMessageTime;
-                    contactDao.insertContact(newContact);
-                    contacts.add(newContact);
-                    Log.d(TAG, "Auto-created contact for: " + otherUserNickname);
-                } else {
-                    existingContact.lastSeenDate =
-                            Math.max(existingContact.lastSeenDate, chatRoom.lastMessageTime);
-                    contacts.add(existingContact);
-                }
-            }
-
-            Log.d(TAG, "Total contacts processed: " + contacts.size());
-
-            runOnUiThread(() -> updateContactsWithOnlineStatus(contacts));
-        }).start();
-    }
-
-    private void updateContactsWithOnlineStatus(List<Contact> contacts) {
-        // Firebase online durumlarını işle
-        for (Contact contact : contacts) {
-            boolean isOnline = false;
-            for (FirebaseManager.ChatUser fbUser : firebaseUsers) {
-                String normalizedContactNick = normalizeNickname(contact.originalNickname);
-                String normalizedFbUserNick = normalizeNickname(fbUser.nickname);
-
-                if (normalizedFbUserNick.equals(normalizedContactNick)) {
-                    isOnline = fbUser.isOnline;
-                    contact.lastSeenDate = fbUser.lastSeen;
-                    Log.d(TAG, "Matched Firebase user: " + fbUser.nickname +
-                            " ↔ contact: " + contact.originalNickname);
-                    break;
-                }
-            }
-            // Basit işaret: "online" / "offline" (sıralama için)
-            contact.profileImagePath = isOnline ? "online" : "offline";
-        }
-
-        // Sıralama: önce online, sonra ada göre
-        Collections.sort(contacts, new Comparator<Contact>() {
-            @Override
-            public int compare(Contact c1, Contact c2) {
-                boolean c1Online = "online".equals(c1.profileImagePath);
-                boolean c2Online = "online".equals(c2.profileImagePath);
-
-                if (c1Online && !c2Online) return -1;
-                if (!c1Online && c2Online) return 1;
-
-                String name1 = c1.getDisplayNameOrOriginal();
-                String name2 = c2.getDisplayNameOrOriginal();
-                return name1.compareToIgnoreCase(name2);
-            }
-        });
-
-        contactsAdapter.updateContacts(contacts);
-        lastRenderedContacts = new ArrayList<>(contacts);
-    }
-
-    private void onContactLongClick(Contact contact) {
-        showRenameDialog(contact);
-    }
-
-    private void onContactClick(Contact contact) {
-        new Thread(() -> {
-            ChatRoom existingRoom =
-                    chatRoomDao.findChatRoomBetweenUsers(myNickname, contact.originalNickname);
-
-            if (existingRoom == null) {
-                ChatRoom newRoom = new ChatRoom(myNickname, contact.originalNickname);
-                chatRoomDao.insertChatRoom(newRoom);
-                existingRoom = newRoom;
-            }
-
-            final String chatRoomId = existingRoom.chatRoomId;
-
-            runOnUiThread(() -> {
-                Intent intent = new Intent(ContactsActivity.this, ChatActivity.class);
-                intent.putExtra("chatRoomId", chatRoomId);
-                intent.putExtra("otherUserNickname", contact.originalNickname);
-                startActivity(intent);
-                Log.d(TAG, "Opening chat with: " + contact.originalNickname);
-            });
-        }).start();
-    }
-
-    private void showRenameDialog(Contact contact) {
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setTitle("Rename Contact");
-
-        final EditText input = new EditText(this);
-        input.setText(contact.displayName != null ? contact.displayName : contact.originalNickname);
-        input.selectAll();
-        builder.setView(input);
-
-        builder.setPositiveButton("Save", (dialog, which) -> {
-            String newName = input.getText().toString().trim();
-            if (!TextUtils.isEmpty(newName)) {
-                new Thread(() -> {
-                    contactDao.updateDisplayName(contact.originalNickname, newName);
-                    runOnUiThread(() ->
-                            Log.d(TAG, "Renamed " + contact.originalNickname + " → " + newName));
-                }).start();
-            }
-        });
-
-        builder.setNegativeButton("Cancel", (dialog, which) -> dialog.cancel());
-        builder.show();
-    }
-
-    private void showAddContactDialog() {
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setTitle("Add Contact");
-        builder.setMessage("Enter the nickname of the person you want to add:");
-
-        final EditText input = new EditText(this);
-        input.setHint("Nickname");
-        builder.setView(input);
-
-        builder.setPositiveButton("Add", (dialog, which) -> {
-            String nickname = input.getText().toString().trim();
-            if (!TextUtils.isEmpty(nickname) && !nickname.equals(myNickname)) {
-                new Thread(() -> {
-                    Contact existing = contactDao.getContactByNickname(nickname);
-                    if (existing == null) {
-                        Contact newContact = new Contact(nickname, nickname, "tr");
-                        newContact.lastSeenDate = System.currentTimeMillis();
-                        contactDao.insertContact(newContact);
-                        runOnUiThread(() ->
-                                Log.d(TAG, "Added new contact: " + nickname));
-                    } else {
-                        runOnUiThread(() ->
-                                Log.d(TAG, "Contact already exists: " + nickname));
-                    }
-                }).start();
-            }
-        });
-
-        builder.setNegativeButton("Cancel", (dialog, which) -> dialog.cancel());
-        builder.show();
-    }
-
-    // ---- Menu ----
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        if (item.getItemId() == android.R.id.home) {
-            finish();
-            return true;
-        }
-        return super.onOptionsItemSelected(item);
-    }
-
-    // ---- Lifecycle ----
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        if (firebaseManager != null) {
-            firebaseManager.removeListener(this);
-            firebaseManager.stopUsersListener();
-            firebaseManager.stopListeningRoom();
+        if (fm != null) {
+            fm.removeListener(this);
+            fm.stopUsersListener();
         }
     }
 
-    // ===== FirebaseManager.FirebaseListener =====
-    @Override
-    public void onUserListUpdated(List<FirebaseManager.ChatUser> users) {
-        this.firebaseUsers = users;
-        if (lastRenderedContacts != null && !lastRenderedContacts.isEmpty()) {
-            // Ekrandaki listeyi online durumuyla tazele
-            updateContactsWithOnlineStatus(new ArrayList<>(lastRenderedContacts));
-        }
-    }
+    // ===== Firebase Listener =====
+
+    @Override public void onUsersListeningStarted() {}
+    @Override public void onUsersListeningStopped() {}
 
     @Override
-    public void onMessageReceived(String from, String message, String chatRoomId,
-                                  long timestamp, String senderLanguage) {
-        // Mesajdan kişiyi otomatik ekle (yoksa)
-        new Thread(() -> {
-            int exists = contactDao.isContactExists(from);
-            if (exists == 0 && !from.equals(myNickname)) {
-                Contact newContact = new Contact(from, from, senderLanguage);
-                contactDao.insertContact(newContact);
-                Log.d(TAG, "Auto-added new contact: " + from);
+    public void onUserListUpdated(@NonNull List<FirebaseManager.ChatUser> users) {
+        // Gelen tüm kullanıcıları haritaya koy (normalize edilmiş nick ile)
+        usersByNick.clear();
+        for (FirebaseManager.ChatUser u : users) {
+            if (u == null || u.nickname == null) continue;
+            usersByNick.put(normalize(u.nickname), u);
+        }
+        // Yerel liste değişmemiş olsa bile durum bilgisi değişmiş olabilir -> yeniden kur
+        runOnUiThread(this::rebuildAndSubmit);
+    }
+
+    // ===== Yardımcılar =====
+
+    private void rebuildAndSubmit() {
+        // localContacts'ı tek tek satıra çevir; varsa usersByNick ile zenginleştir
+        List<Row> rows = new ArrayList<>();
+        String myNick = normalize(fm.getMyNickname());
+
+        for (Contact c : localContacts) {
+            if (c == null || c.originalNickname == null) continue;
+            String nick = normalize(c.originalNickname);
+
+            // KENDİMİ listeleme (istenmiyor)
+            if (!TextUtils.isEmpty(myNick) && myNick.equals(nick)) continue;
+
+            FirebaseManager.ChatUser u = usersByNick.get(nick);
+
+            Row r = new Row();
+            r.originalNickname = c.originalNickname;
+            r.displayName = c.getDisplayNameOrOriginal();
+            // Dil: Firebase varsa onu, yoksa contact.language
+            String lang = (u != null && !TextUtils.isEmpty(u.language)) ? u.language
+                         : (TextUtils.isEmpty(c.language) ? "—" : c.language);
+            r.subtitle = "@" + c.originalNickname + " • " + lang;
+            r.online = (u != null && u.isOnline);
+
+            rows.add(r);
+        }
+
+        adapter.submit(rows);
+        updateEmptyState();
+    }
+
+    private void updateEmptyState() {
+        boolean empty = adapter.getItemCount() == 0;
+        emptyState.setVisibility(empty ? View.VISIBLE : View.GONE);
+        rv.setVisibility(empty ? View.GONE : View.VISIBLE);
+    }
+
+    private void openChat(String peerNickname) {
+        if (TextUtils.isEmpty(peerNickname)) return;
+        Intent i = new Intent(this, ChatActivity.class);
+        i.putExtra("peerNickname", peerNickname);
+        startActivity(i);
+    }
+
+    private static String normalize(String s) {
+        if (s == null) return "";
+        String t = s.trim();
+        if (t.startsWith("@")) t = t.substring(1);
+        return t.toLowerCase(Locale.ROOT);
+    }
+
+    private int dp(int v) {
+        return (int) (v * getResources().getDisplayMetrics().density);
+    }
+
+    // ===== Kişi Ekle Dialogu =====
+    private void showAddContactDialog() {
+        LinearLayout root = new LinearLayout(this);
+        root.setOrientation(LinearLayout.VERTICAL);
+        int pad = dp(16);
+        root.setPadding(pad, pad, pad, pad);
+
+        final EditText etNick = new EditText(this);
+        etNick.setHint("Nickname");
+        root.addView(etNick, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+
+        final EditText etDisplay = new EditText(this);
+        etDisplay.setHint("Display name (optional)");
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        lp.topMargin = dp(8);
+        root.addView(etDisplay, lp);
+
+        new AlertDialog.Builder(this)
+                .setTitle("Add contact")
+                .setView(root)
+                .setNegativeButton("Cancel", null)
+                .setPositiveButton("Add", (d, w) -> {
+                    String raw = etNick.getText().toString().trim();
+                    if (raw.isEmpty()) {
+                        Toast.makeText(this, "Please enter a nickname", Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+                    String nickNorm = normalize(raw);
+
+                    // Kendini ekleme
+                    String myNickNorm = normalize(fm.getMyNickname());
+                    if (!TextUtils.isEmpty(myNickNorm) && myNickNorm.equals(nickNorm)) {
+                        Toast.makeText(this, "You cannot add yourself", Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+
+                    String disp = etDisplay.getText().toString().trim();
+
+                    // DB işlemleri arka thread’de
+                    new Thread(() -> {
+                        // Case-insensitive varlık kontrolü
+                        int exists = contactDao.isContactExistsCI(nickNorm);
+                        if (exists > 0) {
+                            runOnUiThread(() ->
+                                    Toast.makeText(this, "This contact already exists", Toast.LENGTH_SHORT).show());
+                            return;
+                        }
+
+                        // Kaydet (Contact ctor: (originalNickname, displayName, language))
+                        Contact c = new Contact(nickNorm, disp, "");
+                        contactDao.insertContact(c);
+
+                        // LiveData zaten gözlemliyor -> otomatik liste yenilenecek
+                        runOnUiThread(() ->
+                                Toast.makeText(this, "Contact added", Toast.LENGTH_SHORT).show());
+                    }).start();
+                })
+                .show();
+    }
+
+    // ===== Görsel satır modeli =====
+    static class Row {
+        String originalNickname;
+        String displayName;
+        String subtitle; // @nick • lang
+        boolean online;
+    }
+
+    // ===== Adapter =====
+    static class UsersAdapter extends RecyclerView.Adapter<UsersAdapter.VH> {
+
+        interface Click { void onClick(@NonNull String originalNickname); }
+
+        private final List<Row> data = new ArrayList<>();
+        private final Click click;
+
+        UsersAdapter(Click c) { this.click = c; }
+
+        void submit(List<Row> rows) {
+            data.clear();
+            if (rows != null) data.addAll(rows);
+            notifyDataSetChanged();
+        }
+
+        @NonNull @Override
+        public VH onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+            View v = LayoutInflater.from(parent.getContext())
+                    .inflate(R.layout.item_contact, parent, false);
+            return new VH(v);
+        }
+
+        @Override
+        public void onBindViewHolder(@NonNull VH h, int pos) {
+            Row r = data.get(pos);
+            h.tvName.setText(r.displayName == null ? r.originalNickname : r.displayName);
+            h.tvNick.setText(r.subtitle == null ? ("@" + r.originalNickname) : r.subtitle);
+            h.tvStatus.setText(r.online ? "Online" : "Offline");
+
+            View.OnClickListener open = v -> {
+                if (click != null) click.onClick(r.originalNickname);
+            };
+            h.itemView.setOnClickListener(open);
+            h.btnChat.setOnClickListener(open);
+        }
+
+        @Override public int getItemCount() { return data.size(); }
+
+        static class VH extends RecyclerView.ViewHolder {
+            TextView tvName, tvNick, tvStatus;
+            ImageView btnChat;
+            VH(@NonNull View v) {
+                super(v);
+                tvName   = v.findViewById(R.id.tvContactName);
+                tvNick   = v.findViewById(R.id.tvContactNickname);
+                tvStatus = v.findViewById(R.id.tvOnlineStatus);
+                btnChat  = v.findViewById(R.id.btnChat);
             }
-        }).start();
-    }
-
-    @Override
-    public void onConnectionStatusChanged(boolean connected) {
-        Log.d(TAG, "Firebase connection: " + connected);
-    }
-
-    @Override
-    public void onError(String error) {
-        Log.e(TAG, "Firebase error: " + error);
-    }
-
-    // ---- Utils ----
-    /** Normalize nickname: baştaki '@' kaldır + lowercase. */
-    private String normalizeNickname(String nickname) {
-        if (nickname == null || nickname.trim().isEmpty()) return "";
-        String n = nickname.trim();
-        if (n.startsWith("@")) n = n.substring(1);
-        return n.toLowerCase();
+        }
     }
 }

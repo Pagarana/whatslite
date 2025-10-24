@@ -1,14 +1,23 @@
 package com.whatslite.service;
 
-import android.util.Log;
+import android.content.Context;
 
-public class GeminiTranslationService {
-    private static final String TAG = "GeminiService";
+public final class GeminiTranslationService {
+    private GeminiTranslationService(){}
 
-    // Placeholder: Buraya gerçek Gemini API entegrasyonunu ekleyebilirsin.
-    public String translate(String apiKey, String text, String from, String to) {
-        Log.d(TAG, "Gemini placeholder çalıştı");
-        // Şimdilik echo:
-        return text;
+    public interface Callback {
+        void onSuccess(String translated);
+        void onError(Throwable t);
+    }
+
+    public static boolean isConfigured() {
+        // Stub: gerçek anahtar kontrolü burada yapılır
+        return false;
+    }
+
+    public static void translateWithAI(Context ctx, String text, String from, String to, Callback cb) {
+        // Stub: yapılandırılmadıysa hata verelim
+        if (!isConfigured()) { cb.onError(new IllegalStateException("Gemini not configured")); return; }
+        cb.onSuccess(text);
     }
 }

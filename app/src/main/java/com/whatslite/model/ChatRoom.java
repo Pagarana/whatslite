@@ -7,18 +7,17 @@ import androidx.room.PrimaryKey;
 
 @Entity(tableName = "chat_rooms")
 public class ChatRoom {
-    @PrimaryKey
-    @NonNull
+    @PrimaryKey @NonNull
     public String chatRoomId;
-    
+
     public String participant1;
     public String participant2;
     public String lastMessage;
     public long lastMessageTime;
     public boolean isActive;
-    
+
     public ChatRoom() {}
-    
+
     @Ignore
     public ChatRoom(String participant1, String participant2) {
         this.participant1 = participant1;
@@ -28,17 +27,12 @@ public class ChatRoom {
         this.lastMessageTime = System.currentTimeMillis();
         this.isActive = true;
     }
-    
-    private String generateChatRoomId(String user1, String user2) {
-        // Alfabetik sıraya koy ki aynı oda ID'si oluşsun
-        if (user1.compareTo(user2) < 0) {
-            return user1 + "_" + user2;
-        } else {
-            return user2 + "_" + user1;
-        }
+
+    private String generateChatRoomId(String a, String b) {
+        return a.compareToIgnoreCase(b) <= 0 ? a + "__" + b : b + "__" + a;
     }
-    
-    public String getOtherParticipant(String myNickname) {
-        return myNickname.equals(participant1) ? participant2 : participant1;
+
+    public String getOtherParticipant(String me) {
+        return me.equals(participant1) ? participant2 : participant1;
     }
 }
