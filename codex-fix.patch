@@ -1,0 +1,95 @@
+﻿diff --git a/build.gradle b/build.gradle
+index 1111111..2222222 100644
+--- a/build.gradle
++++ b/build.gradle
+@@ -1,8 +1,8 @@
+ // Top-level build file
+ plugins {
+-    id 'com.android.application' version '8.13.0' apply false
++    id 'com.android.application' version '8.10.0' apply false
+     id 'org.jetbrains.kotlin.android' version '2.0.20' apply false
+     id 'com.google.gms.google-services' version '4.4.2' apply false
+ }
+diff --git a/gradle/wrapper/gradle-wrapper.properties b/gradle/wrapper/gradle-wrapper.properties
+index 3333333..4444444 100644
+--- a/gradle/wrapper/gradle-wrapper.properties
++++ b/gradle/wrapper/gradle-wrapper.properties
+@@ -1,8 +1,7 @@
+ distributionBase=GRADLE_USER_HOME
+ distributionPath=wrapper/dists
+-distributionUrl=https\://services.gradle.org/distributions/gradle-8.13-bin.zip
++distributionUrl=https\://services.gradle.org/distributions/gradle-8.11.1-bin.zip
+ networkTimeout=10000
+ validateDistributionUrl=true
+ zipStoreBase=GRADLE_USER_HOME
+ zipStorePath=wrapper/dists
+-android.databinding.enableDebugLogs=true
+diff --git a/gradle.properties b/gradle.properties
+index 5555555..6666666 100644
+--- a/gradle.properties
++++ b/gradle.properties
+@@ -1,16 +1,18 @@
+ org.gradle.jvmargs=-Xmx4g -Dfile.encoding=UTF-8
+ android.useAndroidX=true
+ android.nonTransitiveRClass=true
+ org.gradle.configuration-cache=true
+ org.gradle.parallel=true
+ 
+-# BuildConfig'i modül bazında açmak istemezseniz, buradan da açabilirsiniz:
+-# android.defaults.buildfeatures.buildconfig=true
+-
+-# DeepL API (kendi anahtarınızı kullanın)
+-DEEPL_API_KEY=89d7e425-8f63-49ed-bc19-51510703a14a:fx
+-# Ücretsiz hesap için host:
+-DEEPL_API_HOST=api-free.deepl.com
+-# Pro hesap için:
+-# DEEPL_API_HOST=api.deepl.com
++# (Opsiyonel) DataBinding debug log'u burada dursun (wrapper dosyasında olmamalı)
++android.databinding.enableDebugLogs=true
++
++# DeepL API anahtarını repoda tutma.
++# Gerçek anahtarı kendi makinendeki  %USERPROFILE%\.gradle\gradle.properties  içine koy:
++#   DEEPL_API_KEY=anahtarın
++# Projede placeholder kalsın (boş).
++DEEPL_API_KEY=
++# Ücretsiz host:
++DEEPL_API_HOST=api-free.deepl.com
++# Pro için:
++# DEEPL_API_HOST=api.deepl.com
+diff --git a/app/src/main/AndroidManifest.xml b/app/src/main/AndroidManifest.xml
+index 7777777..8888888 100644
+--- a/app/src/main/AndroidManifest.xml
++++ b/app/src/main/AndroidManifest.xml
+@@ -1,7 +1,7 @@
+ <?xml version="1.0" encoding="utf-8"?>
+ <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+ 
+-    <!-- İzinler -->
++    <!-- İzinler -->
+     <uses-permission android:name="android.permission.INTERNET"/>
+     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
+     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+@@ -39,15 +39,20 @@
+             </intent-filter>
+         </service>
+ 
+-        <!-- Bildirim kanal/ikon rengi (varsayılan) -->
++        <!-- Bildirim kanal/ikon rengi (varsayılan) -->
+         <meta-data
+             android:name="com.google.firebase.messaging.default_notification_channel_id"
+-            android:value="whatslite_general" />
++            android:value="whatslite_default_channel" />
+         <meta-data
+             android:name="com.google.firebase.messaging.default_notification_icon"
+             android:resource="@drawable/ic_translate" />
+         <meta-data
+             android:name="com.google.firebase.messaging.default_notification_color"
+             android:resource="@color/primary_color" />
+ 
++        <!-- SettingsActivity manifest kaydı -->
++        <activity
++            android:name=".ui.SettingsActivity"
++            android:exported="false" />
++
+     </application>
+ </manifest>

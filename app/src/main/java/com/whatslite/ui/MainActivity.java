@@ -6,6 +6,7 @@ import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.text.TextUtils;
+import android.util.Log;
 import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
@@ -44,7 +45,7 @@ public class MainActivity extends AppCompatActivity {
             "🇵🇹 Português","🇷🇺 Русский","🇸🇦 العربية","🇨🇳 中文","🇯🇵 日本語","🇰🇷 한국어",
             "🇳🇱 Nederlands","🇸🇪 Svenska","🇳🇴 Norsk","🇩🇰 Dansk","🇫🇮 Suomi","🇬🇷 Ελληνικά",
             "🇮🇳 हिन्दी","🇹🇭 ไทย","🇻🇳 Tiếng Việt","🇵🇱 Polski","🇨🇿 Čeština","🇭🇺 Magyar",
-            "🇷🇴 Română","🇧🇬 Български","🇭🇷 Hrvatski","🇸🇌 Slovenčina","🇸🇮 Slovenščina",
+            "🇷🇴 Română","🇧🇬 Български","🇭🇷 Hrvatski","🇸🇰 Slovenčina","🇸🇮 Slovenščina",
             "🇺🇦 Українська","🇮🇷 فارسی","🇮🇱 עברית","🇵🇰 اردو","🇧🇩 বাংলা","🇲🇾 Bahasa Malaysia",
             "🇮🇩 Bahasa Indonesia","🇵🇭 Filipino","🇪🇪 Eesti","🇱🇻 Latviešu","🇱🇹 Lietuvių"
     };
@@ -80,6 +81,23 @@ public class MainActivity extends AppCompatActivity {
         requestNotificationPermission();
 
         DebugUtils.checkFirebaseConnection();
+
+        // === DeepL SMOKE TEST (Logcat: TR_TEST) ===
+        com.whatslite.service.DeepLTranslationService.translateAsync(
+                this,
+                "Hello, how are you?",
+                null,  // source auto-detect
+                "TR",  // target Turkish
+                new com.whatslite.service.DeepLTranslationService.Callback() {
+                    @Override public void onSuccess(String tr) {
+                        Log.d("TR_TEST", "DeepL → " + tr);
+                    }
+                    @Override public void onError(Throwable t) {
+                        Log.e("TR_TEST", "DeepL error", t);
+                    }
+                }
+        );
+        // ==========================================
     }
 
     private void initViews() {

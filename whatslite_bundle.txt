@@ -1,0 +1,4237 @@
+﻿===== WHATSLITE CODE BUNDLE =====
+
+===== FILE/DIR: settings.gradle =====
+pluginManagement {
+    repositories {
+        google()
+        mavenCentral()
+        gradlePluginPortal()
+    }
+}
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+rootProject.name = "whatslite"
+include(":app")
+
+
+===== FILE/DIR: build.gradle =====
+// Top-level build file
+plugins {
+    id 'com.android.application' version '8.13.0' apply false
+    id 'org.jetbrains.kotlin.android' version '2.0.20' apply false
+    id 'com.google.gms.google-services' version '4.4.2' apply false
+}
+
+
+===== FILE/DIR: gradle\wrapper\gradle-wrapper.properties =====
+distributionBase=GRADLE_USER_HOME
+distributionPath=wrapper/dists
+distributionUrl=https\://services.gradle.org/distributions/gradle-8.13-bin.zip
+networkTimeout=10000
+validateDistributionUrl=true
+zipStoreBase=GRADLE_USER_HOME
+zipStorePath=wrapper/dists
+android.databinding.enableDebugLogs=true
+
+
+===== FILE/DIR: gradle.properties =====
+org.gradle.jvmargs=-Xmx4g -Dfile.encoding=UTF-8
+android.useAndroidX=true
+android.nonTransitiveRClass=true
+org.gradle.configuration-cache=true
+org.gradle.parallel=true
+
+# BuildConfig'i modül baz?nda açmak istemezseniz, buradan da açabilirsiniz:
+# android.defaults.buildfeatures.buildconfig=true
+
+# DeepL API (kendi anahtar?n?z? kullan?n)
+DEEPL_API_KEY=89d7e425-8f63-49ed-bc19-51510703a14a:fx
+# Ücretsiz hesap için host:
+DEEPL_API_HOST=api-free.deepl.com
+# Pro hesap için:
+# DEEPL_API_HOST=api.deepl.com
+
+
+
+===== FILE/DIR: app\build.gradle =====
+plugins {
+    id 'com.android.application'
+    id 'org.jetbrains.kotlin.android'
+    id 'com.google.gms.google-services'
+}
+
+android {
+    namespace 'com.whatslite'
+    compileSdk 34
+
+    // DeepL deÄŸiÅŸkenleri (gradle.properties'ten okunur)
+    def deeplKey  = project.hasProperty('DEEPL_API_KEY')  ? project.property('DEEPL_API_KEY')  : ""
+    def deeplHost = project.hasProperty('DEEPL_API_HOST') ? project.property('DEEPL_API_HOST') : "api-free.deepl.com"
+
+    defaultConfig {
+        applicationId "com.whatslite"
+        minSdk 23
+        targetSdk 34
+        versionCode 1
+        versionName "1.0"
+        vectorDrawables { useSupportLibrary = true }
+
+        // DeepL iÃ§in BuildConfig sabitleri
+        buildConfigField "String", "DEEPL_API_KEY", "\"${deeplKey}\""
+        buildConfigField "String", "DEEPL_API_HOST", "\"${deeplHost}\""
+        buildConfigField "String", "DEEPL_BASE_URL", "\"https://${deeplHost}\""
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+        debug {
+            debuggable true
+        }
+    }
+
+    buildFeatures {
+        viewBinding true
+        dataBinding false     // â¬…ï¸ Data Binding kapalÄ±
+        buildConfig true
+    }
+
+    packagingOptions {
+        resources {
+            excludes += ['META-INF/DEPENDENCIES', 'META-INF/INDEX.LIST']
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+        coreLibraryDesugaringEnabled true
+    }
+
+    kotlinOptions {
+        jvmTarget = '17'
+    }
+}
+
+dependencies {
+    // Firebase BOM
+    implementation platform('com.google.firebase:firebase-bom:33.5.1')
+    implementation 'com.google.firebase:firebase-auth'
+    implementation 'com.google.firebase:firebase-database'
+    implementation 'com.google.firebase:firebase-analytics'
+    implementation 'com.google.firebase:firebase-messaging'   // Bildirimler
+
+    // AndroidX & UI
+    implementation 'androidx.appcompat:appcompat:1.7.0'
+    implementation 'androidx.core:core-ktx:1.13.1'
+    implementation 'androidx.recyclerview:recyclerview:1.3.2'
+    implementation 'com.google.android.material:material:1.12.0'
+
+    // Lifecycle
+    implementation 'androidx.lifecycle:lifecycle-livedata:2.8.6'
+    implementation 'androidx.lifecycle:lifecycle-runtime:2.8.6'
+
+    // Network
+    implementation 'com.squareup.okhttp3:okhttp:4.12.0'
+
+    // JSON
+    implementation 'org.json:json:20210307'
+
+    // Avatar
+    implementation 'de.hdodenhof:circleimageview:3.1.0'
+
+    // Room (Javaâ€”annotationProcessor)
+    implementation 'androidx.room:room-runtime:2.6.1'
+    annotationProcessor 'androidx.room:room-compiler:2.6.1'
+
+    // Socket.IO (opsiyonel)
+    implementation('io.socket:socket.io-client:2.1.0') {
+        exclude group: 'org.json', module: 'json'
+    }
+
+    // Desugaring
+    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.1.2'
+}
+
+
+===== FILE/DIR: app\src\main\AndroidManifest.xml =====
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Ä°zinler -->
+    <uses-permission android:name="android.permission.INTERNET"/>
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+
+    <application
+        android:name=".WhatsLiteApplication"
+        android:allowBackup="true"
+        android:label="WhatsLite"
+        android:icon="@drawable/ic_translate"
+        android:roundIcon="@drawable/ic_translate"
+        android:theme="@style/Theme.Material3.DayNight.NoActionBar">
+
+        <!-- Launcher -->
+        <activity
+            android:name=".ui.MainActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+        </activity>
+
+        <!-- Sohbet ekranÄ± -->
+        <activity
+            android:name=".ui.ChatActivity"
+            android:exported="false" />
+
+        <!-- KiÅŸiler ekranÄ± -->
+        <activity
+            android:name=".ui.ContactsActivity"
+            android:exported="false" />
+
+        <!-- (Varsa) sohbet listesi -->
+        <activity
+            android:name=".ui.ChatListActivity"
+            android:exported="false" />
+
+        <!-- FCM mesaj servisimiz -->
+        <service
+            android:name=".service.MyFirebaseMessagingService"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
+
+        <!-- Bildirim kanal/ikon rengi (varsayÄ±lan) -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_channel_id"
+            android:value="whatslite_general" />
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_icon"
+            android:resource="@drawable/ic_translate" />
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_color"
+            android:resource="@color/primary_color" />
+
+    </application>
+</manifest>
+
+
+===== FILE/DIR: app\src\main\java\com\whatslite\adapter\MessagesAdapter.java =====
+package com.whatslite.adapter;
+
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.TextView;
+
+import androidx.annotation.NonNull;
+import androidx.recyclerview.widget.RecyclerView;
+
+import com.whatslite.R;
+import com.whatslite.model.Message;
+
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+import java.util.Locale;
+
+/**
+ * TekrarlÄ± mesajÄ± engellemek iÃ§in Firebase pushKey ile upsert yapar.
+ * addOrUpdateWithKey(key, message) KULLAN!
+ *
+ * item_message_incoming.xml ve item_message_outgoing.xml iÃ§inde
+ * en azÄ±ndan tvText ve tvTime ID'leri olmalÄ±.
+ */
+public class MessagesAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
+
+    public interface MessageActionListener { void onMessageLongClick(Message m, View anchor); }
+
+    private static final int VT_OUT = 1;
+    private static final int VT_IN  = 2;
+
+    private final List<Message> data = new ArrayList<>();
+    private final List<String> keys  = new ArrayList<>(); // Firebase push key paralel dizisi
+    private final String myUid;
+    private final MessageActionListener listener;
+    private final SimpleDateFormat tf = new SimpleDateFormat("HH:mm", Locale.getDefault());
+
+    public MessagesAdapter(String myUid, MessageActionListener l) {
+        this.myUid = myUid;
+        this.listener = l;
+    }
+
+    /** AynÄ± key tekrar edilirse gÃ¼nceller, yoksa ekler. */
+    public void addOrUpdateWithKey(@NonNull String key, @NonNull Message m) {
+        int idx = keys.indexOf(key);
+        if (idx >= 0) {
+            data.set(idx, m);
+            notifyItemChanged(idx);
+        } else {
+            keys.add(key);
+            data.add(m);
+            notifyItemInserted(data.size() - 1);
+        }
+    }
+
+    @Override public int getItemViewType(int position) {
+        Message m = data.get(position);
+        return (m.senderId != null && m.senderId.equals(myUid)) ? VT_OUT : VT_IN;
+    }
+
+    @NonNull @Override
+    public RecyclerView.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int vt) {
+        LayoutInflater inf = LayoutInflater.from(parent.getContext());
+        if (vt == VT_OUT) {
+            View v = inf.inflate(R.layout.item_message_outgoing, parent, false);
+            return new OutVH(v);
+        } else {
+            View v = inf.inflate(R.layout.item_message_incoming, parent, false);
+            return new InVH(v);
+        }
+    }
+
+    @Override
+    public void onBindViewHolder(@NonNull RecyclerView.ViewHolder h, int pos) {
+        Message m = data.get(pos);
+        String time = tf.format(new Date(m.timestamp == 0L ? System.currentTimeMillis() : m.timestamp));
+
+        if (h instanceof OutVH) {
+            OutVH vh = (OutVH) h;
+            vh.tvText.setText(m.text);
+            vh.tvTime.setText(time);
+            vh.itemView.setOnLongClickListener(v -> { if (listener!=null) listener.onMessageLongClick(m, v); return true; });
+        } else {
+            InVH vh = (InVH) h;
+            vh.tvText.setText(m.text);
+            vh.tvTime.setText(time);
+            vh.itemView.setOnLongClickListener(v -> { if (listener!=null) listener.onMessageLongClick(m, v); return true; });
+        }
+    }
+
+    @Override public int getItemCount() { return data.size(); }
+
+    static class OutVH extends RecyclerView.ViewHolder {
+        TextView tvText, tvTime;
+        OutVH(@NonNull View v) {
+            super(v);
+            tvText = v.findViewById(R.id.tvText);
+            tvTime = v.findViewById(R.id.tvTime);
+        }
+    }
+    static class InVH extends RecyclerView.ViewHolder {
+        TextView tvText, tvTime;
+        InVH(@NonNull View v) {
+            super(v);
+            tvText = v.findViewById(R.id.tvText);
+            tvTime = v.findViewById(R.id.tvTime);
+        }
+    }
+}
+
+
+===== FILE/DIR: app\src\main\java\com\whatslite\ui\ChatActivity.java =====
+package com.whatslite.ui;
+
+import android.content.SharedPreferences;
+import android.os.Bundle;
+import android.text.TextUtils;
+import android.view.Gravity;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.EditText;
+import android.widget.ImageButton;
+import android.widget.LinearLayout;
+import android.widget.Toast;
+
+import androidx.annotation.Nullable;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
+
+import com.whatslite.adapter.MessagesAdapter;
+import com.whatslite.model.Message;
+import com.whatslite.service.FirebaseManager;
+
+import java.util.Date;
+
+public class ChatActivity extends AppCompatActivity implements MessagesAdapter.MessageActionListener {
+
+    private RecyclerView rv;
+    private EditText et;
+    private ImageButton btn;
+
+    private MessagesAdapter adapter;
+    private FirebaseManager fm;
+
+    private String myNick;
+    private String peerNick;
+    private String roomId;
+
+    @Override
+    protected void onCreate(@Nullable Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+
+        // Basit programatik UI
+        LinearLayout root = new LinearLayout(this);
+        root.setOrientation(LinearLayout.VERTICAL);
+        root.setLayoutParams(new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+
+        rv = new RecyclerView(this);
+        LinearLayoutManager lm = new LinearLayoutManager(this);
+        lm.setStackFromEnd(true);
+        rv.setLayoutManager(lm);
+        root.addView(rv, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
+
+        LinearLayout bar = new LinearLayout(this);
+        bar.setOrientation(LinearLayout.HORIZONTAL);
+        int p = dp(12);
+        bar.setPadding(p, dp(8), p, dp(8));
+
+        et = new EditText(this);
+        et.setHint("Mesaj yazÄ±nâ€¦");
+        et.setMaxLines(4);
+        bar.addView(et, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+
+        btn = new ImageButton(this);
+        btn.setImageResource(android.R.drawable.ic_menu_send);
+        btn.setBackground(null);
+        LinearLayout.LayoutParams blp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        blp.gravity = Gravity.CENTER_VERTICAL;
+        bar.addView(btn, blp);
+
+        root.addView(bar, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+
+        setContentView(root);
+
+        // Prefs: kendim
+        SharedPreferences prefs = getSharedPreferences("ChatTranslator", MODE_PRIVATE);
+        myNick = prefs.getString("nickname", "");
+
+        // KarÅŸÄ± taraf
+        peerNick = getIntent().getStringExtra("peerNickname");
+        if (TextUtils.isEmpty(peerNick)) {
+            String peerUid = getIntent().getStringExtra("peerUid");
+            peerNick = (peerUid != null && !peerUid.trim().isEmpty()) ? peerUid : "unknown";
+        }
+
+        // Oda kimliÄŸi
+        roomId = FirebaseManager.roomIdFor(myNick, peerNick);
+
+        // Firebase
+        fm = FirebaseManager.getInstance();
+        fm.setContext(this);
+
+        // Adapter (myUid hazÄ±r deÄŸilse geÃ§ici)
+        adapter = new MessagesAdapter(fm.getMyUid() == null ? "temp" : fm.getMyUid(), this);
+        rv.setAdapter(adapter);
+
+        // OdayÄ± dinle: DUPLICATE ENGELÄ° => pushKey ile upsert
+        fm.startListeningRoom(roomId, dto -> runOnUiThread(() -> {
+            Message m = new Message();
+            m.chatRoomId = roomId;
+            m.text = dto.text == null ? "" : dto.text;
+            m.senderId = dto.senderId == null ? "" : dto.senderId;
+            m.timestamp = dto.timestamp == 0L ? new Date().getTime() : dto.timestamp;
+            m.translatedText = dto.translatedText;
+            m.targetLanguage = dto.targetLanguage;
+            String myUid = fm.getMyUid();
+            m.isFromMe = (myUid != null && myUid.equals(dto.senderId));
+            adapter.addOrUpdateWithKey(dto.id == null ? (m.senderId+"|"+m.timestamp+"|"+m.text.hashCode()) : dto.id, m);
+            rv.scrollToPosition(Math.max(0, adapter.getItemCount() - 1));
+        }));
+
+        // Inbox'Ä±mÄ± okundu yap (karÅŸÄ± taraf adÄ±na gelen satÄ±rdaki kÄ±rmÄ±zÄ± nokta vs)
+        fm.markInboxRead(peerNick);
+
+        // GÃ¶nder butonu â€“ SADECE Firebaseâ€™e yaz, adapterâ€™e ELLE ekleme (Ã§iftlenme biter)
+        btn.setOnClickListener(v -> {
+            String t = et.getText().toString().trim();
+            if (t.isEmpty()) return;
+            fm.sendMessage(roomId, t, peerNick, (ok, err) -> runOnUiThread(() -> {
+                if (ok) et.setText("");
+                else Toast.makeText(this, "GÃ¶nderilemedi: " + err, Toast.LENGTH_SHORT).show();
+            }));
+        });
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        fm.markInboxRead(peerNick);
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        if (fm != null) fm.stopListeningRoom();
+    }
+
+    private int dp(int v) { return (int) (v * getResources().getDisplayMetrics().density); }
+
+    @Override public void onMessageLongClick(Message m, View anchor) { /* menÃ¼ vs. */ }
+}
+
+
+===== FILE/DIR: app\src\main\java\com\whatslite\service\FirebaseManager.java =====
+package com.whatslite.service;
+
+import android.content.Context;
+import android.util.Log;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+
+import com.google.firebase.FirebaseApp;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.database.ChildEventListener;
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.ServerValue;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+
+/**
+ * Tek merkez: auth, users, rooms, inbox.
+ */
+public class FirebaseManager {
+
+    private static final String TAG = "FirebaseManager";
+
+    // ===== Singleton =====
+    private static FirebaseManager INSTANCE;
+    public static FirebaseManager getInstance() {
+        if (INSTANCE == null) INSTANCE = new FirebaseManager();
+        return INSTANCE;
+    }
+    private FirebaseManager() {}
+
+    // ===== Alanlar =====
+    private Context appCtx;
+    private FirebaseAuth auth;
+    private FirebaseDatabase db;
+    private DatabaseReference usersRef;
+    private DatabaseReference roomsRef;
+    private DatabaseReference inboxRef;
+
+    private String myUid;
+    private String myNickname;
+    private String myLanguage;
+
+    private final List<FirebaseListener> listeners = new ArrayList<>();
+    private com.google.firebase.database.ValueEventListener usersValueListener;
+
+    private ChildEventListener roomChildListener;
+    private DatabaseReference currentRoomMessagesRef;
+
+    private ChildEventListener inboxListener;
+
+    // ===== Listener tipleri / DTO'lar =====
+    public interface FirebaseListener {
+        default void onUserListUpdated(@NonNull List<ChatUser> users) {}
+        default void onJoined(@NonNull String nickname, @NonNull String language) {}
+        default void onUsersListeningStarted() {}
+        default void onUsersListeningStopped() {}
+    }
+    public interface SendCallback { void onResult(boolean ok, @Nullable String err); }
+    public interface MessageStream { void onMessage(@NonNull MessageDTO m); }
+
+    public interface InboxListener { void onItem(@NonNull InboxItem item); }
+
+    public static class ChatUser {
+        public String uid;
+        public String nickname;
+        public String language;
+        public boolean isOnline;
+        public long lastSeen;
+    }
+    public static class MessageDTO {
+        public String id;              // push key
+        public String text;
+        public String senderId;
+        public String senderNickname;
+        public long timestamp;
+        public String translatedText;
+        public String targetLanguage;
+    }
+    public static class InboxItem {
+        public String peer;     // karÅŸÄ± tarafÄ±n nicknameâ€™i
+        public String roomId;
+        public String lastText;
+        public long   timestamp;
+        public boolean hasUnread;
+    }
+
+    // ===== Init / Auth =====
+    public synchronized void setContext(@NonNull Context ctx) {
+        if (appCtx != null) return;
+        appCtx = ctx.getApplicationContext();
+
+        if (FirebaseApp.getApps(appCtx).isEmpty()) {
+            FirebaseApp.initializeApp(appCtx);
+        }
+
+        auth = FirebaseAuth.getInstance();
+        db = FirebaseDatabase.getInstance();
+        usersRef = db.getReference("users");
+        roomsRef = db.getReference("rooms");
+        inboxRef = db.getReference("inbox");
+    }
+
+    public String getMyUid() { return myUid; }
+    public String getMyLanguage() { return myLanguage; }
+    public String getMyNickname() { return myNickname; }
+
+    public void addListener(@NonNull FirebaseListener l) { if (!listeners.contains(l)) listeners.add(l); }
+    public void removeListener(@NonNull FirebaseListener l) { listeners.remove(l); }
+
+    public void joinChat(@NonNull String nickname, @NonNull String language) {
+        ensureContext();
+        final String normalized = normalize(nickname);
+        this.myNickname = normalized;
+        this.myLanguage = language;
+
+        if (auth.getCurrentUser() == null) {
+            auth.signInAnonymously()
+                .addOnSuccessListener(r -> {
+                    myUid = r.getUser() != null ? r.getUser().getUid() : null;
+                    upsertUserNode(normalized, language, true);
+                    for (FirebaseListener l : listeners) l.onJoined(normalized, language);
+                })
+                .addOnFailureListener(e -> Log.e(TAG, "Anonymous sign-in FAIL: " + e));
+        } else {
+            myUid = auth.getCurrentUser().getUid();
+            upsertUserNode(normalized, language, true);
+            for (FirebaseListener l : listeners) l.onJoined(normalized, language);
+        }
+    }
+
+    // ===== Users =====
+    public void startUsersListener() {
+        if (usersValueListener != null) return;
+        for (FirebaseListener l : listeners) l.onUsersListeningStarted();
+
+        usersValueListener = usersRef.addValueEventListener(new com.google.firebase.database.ValueEventListener() {
+            @Override public void onDataChange(@NonNull DataSnapshot snapshot) {
+                List<ChatUser> list = new ArrayList<>();
+                for (DataSnapshot c : snapshot.getChildren()) {
+                    ChatUser u = new ChatUser();
+                    u.nickname = c.getKey();
+                    Object val = c.getValue();
+                    if (val instanceof Map) {
+                        Map<?, ?> m = (Map<?, ?>) val;
+                        Object oUid = m.get("uid");
+                        Object oLang = m.get("language");
+                        Object oOnline = m.get("isOnline");
+                        Object oLast = m.get("lastSeen");
+                        u.uid = oUid == null ? null : String.valueOf(oUid);
+                        u.language = oLang == null ? null : String.valueOf(oLang);
+                        u.isOnline = oOnline instanceof Boolean ? (Boolean) oOnline : false;
+                        u.lastSeen = (oLast instanceof Number) ? ((Number) oLast).longValue() : 0L;
+                    }
+                    list.add(u);
+                }
+                for (FirebaseListener l : listeners) l.onUserListUpdated(list);
+            }
+            @Override public void onCancelled(@NonNull DatabaseError error) {
+                Log.e(TAG, "users listener cancelled: " + error);
+            }
+        });
+    }
+
+    public void stopUsersListener() {
+        if (usersValueListener != null) {
+            usersRef.removeEventListener(usersValueListener);
+            usersValueListener = null;
+        }
+        for (FirebaseListener l : listeners) l.onUsersListeningStopped();
+    }
+
+    // ===== Rooms =====
+    public void startListeningRoom(@NonNull String roomId, @NonNull MessageStream stream) {
+        stopListeningRoom();
+
+        currentRoomMessagesRef = roomsRef.child(roomId).child("messages");
+        roomChildListener = currentRoomMessagesRef
+                .orderByChild("timestamp")
+                .addChildEventListener(new ChildEventListener() {
+                    @Override public void onChildAdded(@NonNull DataSnapshot snap, @Nullable String prev) {
+                        MessageDTO dto = snapshotToMessageDTO(snap);
+                        if (dto != null) stream.onMessage(dto);
+                    }
+                    @Override public void onChildChanged(@NonNull DataSnapshot snap, @Nullable String prev) {
+                        MessageDTO dto = snapshotToMessageDTO(snap);
+                        if (dto != null) stream.onMessage(dto); // upsert edecek
+                    }
+                    @Override public void onChildRemoved(@NonNull DataSnapshot snap) {}
+                    @Override public void onChildMoved(@NonNull DataSnapshot snap, @Nullable String prev) {}
+                    @Override public void onCancelled(@NonNull DatabaseError error) {
+                        Log.e(TAG, "room listener cancelled: " + error);
+                    }
+                });
+    }
+
+    public void stopListeningRoom() {
+        if (roomChildListener != null && currentRoomMessagesRef != null) {
+            currentRoomMessagesRef.removeEventListener(roomChildListener);
+        }
+        roomChildListener = null;
+        currentRoomMessagesRef = null;
+    }
+
+    public void sendMessage(@NonNull String roomId,
+                            @NonNull String text,
+                            @NonNull SendCallback cb) {
+        if (myUid == null) { cb.onResult(false, "Auth not ready"); return; }
+        DatabaseReference msgRef = roomsRef.child(roomId).child("messages").push();
+
+        Map<String, Object> m = new HashMap<>();
+        m.put("text", text);
+        m.put("senderId", myUid);
+        m.put("senderNickname", myNickname);
+        m.put("timestamp", ServerValue.TIMESTAMP);
+        m.put("translatedText", null);
+        m.put("targetLanguage", null);
+
+        msgRef.setValue(m)
+                .addOnSuccessListener(v -> cb.onResult(true, null))
+                .addOnFailureListener(e -> cb.onResult(false, e.getMessage()));
+    }
+
+    /** GÃ¶nder + peer'in inbox'Ä±nÄ± gÃ¼ncelle (karÅŸÄ± taraf eklememiÅŸ olsa da gÃ¶rÃ¼nÃ¼r). */
+    public void sendMessage(@NonNull String roomId,
+                            @NonNull String text,
+                            @NonNull String peerNickname,
+                            @NonNull SendCallback cb) {
+        sendMessage(roomId, text, (ok, err) -> {
+            if (!ok) { cb.onResult(false, err); return; }
+            try {
+                String peer = normalize(peerNickname);
+                String me   = myNickname != null ? myNickname : "";
+                Map<String, Object> inbox = new HashMap<>();
+                inbox.put("from", me);
+                inbox.put("roomId", roomId);
+                inbox.put("lastText", text);
+                inbox.put("timestamp", ServerValue.TIMESTAMP);
+                inbox.put("hasUnread", true);
+                inboxRef.child(peer).child(me).updateChildren(inbox)
+                        .addOnSuccessListener(v -> cb.onResult(true, null))
+                        .addOnFailureListener(e -> cb.onResult(false, e.getMessage()));
+            } catch (Exception ex) {
+                Log.e(TAG, "inbox update failed", ex);
+                cb.onResult(true, null);
+            }
+        });
+    }
+
+    /** Sohbet aÃ§Ä±ldÄ±ÄŸÄ±nda benim inbox Ã¶ÄŸemi okundu yap. */
+    public void markInboxRead(@NonNull String peerNickname) {
+        try {
+            String me   = myNickname != null ? myNickname : "";
+            String peer = normalize(peerNickname);
+            Map<String, Object> patch = new HashMap<>();
+            patch.put("hasUnread", false);
+            patch.put("lastReadTs", ServerValue.TIMESTAMP);
+            inboxRef.child(me).child(peer).updateChildren(patch);
+        } catch (Exception e) {
+            Log.e(TAG, "markInboxRead failed", e);
+        }
+    }
+
+    /** Uygulama aÃ§Ä±kken benim inboxâ€™Ä±mÄ± dinle (listeyi gÃ¼ncelle ve bildirim gÃ¶ster). */
+    public void startInboxListenerForMe(@NonNull InboxListener l) {
+        stopInboxListener();
+        if (myNickname == null) return;
+        inboxListener = inboxRef.child(myNickname)
+                .orderByChild("timestamp")
+                .addChildEventListener(new ChildEventListener() {
+                    private void handle(@NonNull DataSnapshot s) {
+                        try {
+                            String peer = s.getKey();
+                            Object val = s.getValue();
+                            if (!(val instanceof Map)) return;
+                            Map<?, ?> m = (Map<?, ?>) val;
+
+                            InboxItem it = new InboxItem();
+                            it.peer      = peer;
+                            it.roomId    = str(m.get("roomId"));
+                            it.lastText  = str(m.get("lastText"));
+                            it.timestamp = num(m.get("timestamp"));
+                            Object hu = m.get("hasUnread");
+                            it.hasUnread = (hu instanceof Boolean) ? (Boolean) hu : false;
+
+                            l.onItem(it);
+                        } catch (Exception e) {
+                            Log.e(TAG, "inbox parse error", e);
+                        }
+                    }
+                    @Override public void onChildAdded(@NonNull DataSnapshot snapshot, @Nullable String previousChildName) { handle(snapshot); }
+                    @Override public void onChildChanged(@NonNull DataSnapshot snapshot, @Nullable String previousChildName) { handle(snapshot); }
+                    @Override public void onChildRemoved(@NonNull DataSnapshot snapshot) {}
+                    @Override public void onChildMoved(@NonNull DataSnapshot snapshot, @Nullable String previousChildName) {}
+                    @Override public void onCancelled(@NonNull DatabaseError error) { Log.e(TAG, "inbox cancelled: " + error); }
+                });
+    }
+
+    public void stopInboxListener() {
+        if (inboxListener != null && myNickname != null) {
+            inboxRef.child(myNickname).removeEventListener(inboxListener);
+        }
+        inboxListener = null;
+    }
+
+    /** Debug yardÄ±mcÄ±larÄ± iÃ§in PUBLIC. */
+    public void ensureUsersNode(@NonNull String nickname, @NonNull String language) {
+        String n = normalize(nickname);
+        Map<String, Object> map = new HashMap<>();
+        map.put("uid", myUid == null ? "" : myUid);
+        map.put("language", language);
+        map.put("isOnline", true);
+        map.put("lastSeen", ServerValue.TIMESTAMP);
+        usersRef.child(n).updateChildren(map);
+    }
+
+    // ===== YardÄ±mcÄ±lar =====
+    public static String roomIdFor(@NonNull String a, @NonNull String b) {
+        String na = normalize(a);
+        String nb = normalize(b);
+        return (na.compareTo(nb) <= 0) ? na + "__" + nb : nb + "__" + na;
+    }
+    public static String normalize(@NonNull String s) {
+        String t = s.trim();
+        if (t.startsWith("@")) t = t.substring(1);
+        return t.toLowerCase(Locale.ROOT);
+    }
+    private void ensureContext() {
+        if (appCtx == null) throw new IllegalStateException("Call setContext(context) first.");
+    }
+    private void upsertUserNode(@NonNull String nickname, @NonNull String language, boolean online) {
+        Map<String, Object> map = new HashMap<>();
+        map.put("uid", myUid == null ? "" : myUid);
+        map.put("language", language);
+        map.put("isOnline", online);
+        map.put("lastSeen", ServerValue.TIMESTAMP);
+
+        DatabaseReference me = usersRef.child(nickname);
+        me.updateChildren(map);
+
+        Map<String, Object> off = new HashMap<>();
+        off.put("isOnline", false);
+        off.put("lastSeen", ServerValue.TIMESTAMP);
+        me.onDisconnect().updateChildren(off);
+    }
+    @Nullable
+    private static com.whatslite.service.FirebaseManager.MessageDTO snapshotToMessageDTO(@NonNull DataSnapshot s) {
+        Object val = s.getValue();
+        if (!(val instanceof Map)) return null;
+        Map<?, ?> m = (Map<?, ?>) val;
+
+        MessageDTO dto = new MessageDTO();
+        dto.id = s.getKey();
+        dto.text = str(m.get("text"));
+        dto.senderId = str(m.get("senderId"));
+        dto.senderNickname = str(m.get("senderNickname"));
+        dto.timestamp = num(m.get("timestamp"));
+        dto.translatedText = (m.get("translatedText") == null) ? null : String.valueOf(m.get("translatedText"));
+        dto.targetLanguage = (m.get("targetLanguage") == null) ? null : String.valueOf(m.get("targetLanguage"));
+        return dto;
+    }
+    private static String str(Object o) { return o == null ? null : String.valueOf(o); }
+    private static long num(Object o) { return (o instanceof Number) ? ((Number) o).longValue() : 0L; }
+}
+
+
+===== FILE/DIR: app\src\main\java\com\whatslite\WhatsLiteApplication.java =====
+package com.whatslite;
+
+import android.app.Application;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.os.Build;
+import android.util.Log;
+
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
+
+public class WhatsLiteApplication extends Application {
+
+    public static final String CHANNEL_ID = "whatslite_default_channel";
+
+    @Override
+    public void onCreate() {
+        super.onCreate();
+
+        // 1) Bildirim kanalÄ± (Android 8.0+)
+        createDefaultNotificationChannel();
+
+        // 2) Firebase anonim oturum (telefon + emÃ¼latÃ¶r aynÄ± projeye baÄŸlansÄ±n)
+        ensureAnonymousSignIn();
+    }
+
+    private void createDefaultNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            String name = "WhatsLite Bildirimleri";
+            String desc = "Mesaj ve genel bildirim kanalÄ±";
+            int importance = NotificationManager.IMPORTANCE_DEFAULT;
+
+            NotificationChannel channel = new NotificationChannel(CHANNEL_ID, name, importance);
+            channel.setDescription(desc);
+
+            NotificationManager nm = getSystemService(NotificationManager.class);
+            if (nm != null) {
+                nm.createNotificationChannel(channel);
+                Log.d("APP", "NotificationChannel created: " + CHANNEL_ID);
+            } else {
+                Log.w("APP", "NotificationManager is null; channel not created");
+            }
+        }
+    }
+
+    private void ensureAnonymousSignIn() {
+        FirebaseAuth auth = FirebaseAuth.getInstance();
+        if (auth.getCurrentUser() == null) {
+            auth.signInAnonymously().addOnCompleteListener(t -> {
+                if (t.isSuccessful()) {
+                    FirebaseUser u = auth.getCurrentUser();
+                    Log.d("APP", "Anon sign-in OK. uid=" + (u != null ? u.getUid() : "null"));
+                } else {
+                    Log.e("APP", "Anon sign-in FAILED: ", t.getException());
+                }
+            });
+        } else {
+            Log.d("APP", "Already signed-in. uid=" + auth.getCurrentUser().getUid());
+        }
+    }
+}
+
+
+===== FILE/DIR: app\src\main\res\layout =====
+
+--- C:\Users\abdukadir eksilmez\Desktop\whatslite\app\src\main\res\layout\activity_chat.xml.FullName ---
+
+--- C:\Users\abdukadir eksilmez\Desktop\whatslite\app\src\main\res\layout\activity_chat_list.xml.FullName ---
+
+--- C:\Users\abdukadir eksilmez\Desktop\whatslite\app\src\main\res\layout\activity_contacts.xml.FullName ---
+
+--- C:\Users\abdukadir eksilmez\Desktop\whatslite\app\src\main\res\layout\activity_main.xml.FullName ---
+
+--- C:\Users\abdukadir eksilmez\Desktop\whatslite\app\src\main\res\layout\activity_settings.xml.FullName ---
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:orientation="vertical"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".ui.SettingsActivity">
+
+    <TextView
+        android:id="@+id/tvTitle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Settings"/>
+</LinearLayout>
+
+
+--- C:\Users\abdukadir eksilmez\Desktop\whatslite\app\src\main\res\layout\item_chat_room.xml.FullName ---
+
+--- C:\Users\abdukadir eksilmez\Desktop\whatslite\app\src\main\res\layout\item_contact.xml.FullName ---
+
+--- C:\Users\abdukadir eksilmez\Desktop\whatslite\app\src\main\res\layout\item_message_incoming.xml.FullName ---
+
+--- C:\Users\abdukadir eksilmez\Desktop\whatslite\app\src\main\res\layout\item_message_outgoing.xml.FullName ---
+
+--- C:\Users\abdukadir eksilmez\Desktop\whatslite\app\src\main\res\layout\item_message_received.xml.FullName ---
+
+--- C:\Users\abdukadir eksilmez\Desktop\whatslite\app\src\main\res\layout\item_message_sent.xml.FullName ---
+
+--- C:\Users\abdukadir eksilmez\Desktop\whatslite\app\src\main\res\layout\item_online_user.xml.FullName ---
+
+--- C:\Users\abdukadir eksilmez\Desktop\whatslite\app\src\main\res\layout\nav_drawer_menu.xml.FullName ---
+
+===== FILE/DIR: app\src\main\java =====
+
+--- C:\Users\abdukadir eksilmez\Desktop\whatslite\app\src\main\java\com\whatslite\adapter\ChatRoomsAdapter.java.FullName ---
+package com.whatslite.adapter;
+
+import android.text.format.DateUtils;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.TextView;
+import androidx.annotation.NonNull;
+import androidx.recyclerview.widget.RecyclerView;
+import com.whatslite.R;
+import com.whatslite.model.ChatRoom;
+import java.util.ArrayList;
+import java.util.List;
+
+public class ChatRoomsAdapter extends RecyclerView.Adapter<ChatRoomsAdapter.ChatRoomViewHolder> {
+    
+    private List<ChatRoom> chatRooms = new ArrayList<>();
+    private OnChatRoomClickListener clickListener;
+    private String currentUserNickname;
+    
+    public interface OnChatRoomClickListener {
+        void onChatRoomClick(ChatRoom chatRoom);
+    }
+    
+    public ChatRoomsAdapter(OnChatRoomClickListener clickListener) {
+        this.clickListener = clickListener;
+    }
+    
+    public void updateChatRooms(List<ChatRoom> newChatRooms, String currentUserNickname) {
+        this.chatRooms = new ArrayList<>(newChatRooms);
+        this.currentUserNickname = currentUserNickname;
+        notifyDataSetChanged();
+    }
+    
+    @NonNull
+    @Override
+    public ChatRoomViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+        View view = LayoutInflater.from(parent.getContext())
+                .inflate(R.layout.item_chat_room, parent, false);
+        return new ChatRoomViewHolder(view);
+    }
+    
+    @Override
+    public void onBindViewHolder(@NonNull ChatRoomViewHolder holder, int position) {
+        ChatRoom chatRoom = chatRooms.get(position);
+        holder.bind(chatRoom);
+    }
+    
+    @Override
+    public int getItemCount() {
+        return chatRooms.size();
+    }
+    
+    class ChatRoomViewHolder extends RecyclerView.ViewHolder {
+        private TextView tvNickname;
+        private TextView tvLastMessage;
+        private TextView tvTime;
+        private TextView tvAvatar;
+        private View unreadIndicator;
+        
+        public ChatRoomViewHolder(@NonNull View itemView) {
+            super(itemView);
+            tvNickname = itemView.findViewById(R.id.tvNickname);
+            tvLastMessage = itemView.findViewById(R.id.tvLastMessage);
+            tvTime = itemView.findViewById(R.id.tvTime);
+            tvAvatar = itemView.findViewById(R.id.tvAvatar);
+            unreadIndicator = itemView.findViewById(R.id.unreadIndicator);
+            
+            itemView.setOnClickListener(v -> {
+                int position = getBindingAdapterPosition();
+                if (position != RecyclerView.NO_POSITION && clickListener != null) {
+                    clickListener.onChatRoomClick(chatRooms.get(position));
+                }
+            });
+        }
+        
+        public void bind(ChatRoom chatRoom) {
+            String otherUserNickname = chatRoom.getOtherParticipant(currentUserNickname);
+            tvNickname.setText(otherUserNickname);
+            
+            // Show first letter in avatar
+            String firstLetter = otherUserNickname.length() > 0 ? 
+                otherUserNickname.substring(0, 1).toUpperCase() : "?";
+            tvAvatar.setText(firstLetter);
+            
+            if (chatRoom.lastMessage != null && !chatRoom.lastMessage.isEmpty()) {
+                tvLastMessage.setText(chatRoom.lastMessage);
+                tvLastMessage.setVisibility(View.VISIBLE);
+            } else {
+                tvLastMessage.setText("No messages yet");
+                tvLastMessage.setVisibility(View.VISIBLE);
+            }
+            
+            // Format time
+            if (chatRoom.lastMessageTime > 0) {
+                CharSequence timeText = DateUtils.getRelativeTimeSpanString(
+                    chatRoom.lastMessageTime,
+                    System.currentTimeMillis(),
+                    DateUtils.MINUTE_IN_MILLIS
+                );
+                tvTime.setText(timeText);
+            } else {
+                tvTime.setText("");
+            }
+            
+            // For now, don't show unread indicator - we can implement this later
+            unreadIndicator.setVisibility(View.GONE);
+        }
+    }
+}
+
+
+--- C:\Users\abdukadir eksilmez\Desktop\whatslite\app\src\main\java\com\whatslite\adapter\ContactsAdapter.java.FullName ---
+package com.whatslite.adapter;
+
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.TextView;
+import androidx.annotation.NonNull;
+import androidx.recyclerview.widget.RecyclerView;
+import com.whatslite.R;
+import com.whatslite.model.Contact;
+import de.hdodenhof.circleimageview.CircleImageView;
+import java.util.ArrayList;
+import java.util.List;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Locale;
+
+public class ContactsAdapter extends RecyclerView.Adapter<ContactsAdapter.ContactViewHolder> {
+
+    private List<Contact> contacts = new ArrayList<>();
+    private OnContactLongClickListener longClickListener;
+    private OnContactClickListener clickListener;
+
+    public interface OnContactLongClickListener {
+        void onContactLongClick(Contact contact);
+    }
+
+    public interface OnContactClickListener {
+        void onContactClick(Contact contact);
+    }
+
+    public ContactsAdapter(OnContactLongClickListener longClickListener, OnContactClickListener clickListener) {
+        this.longClickListener = longClickListener;
+        this.clickListener = clickListener;
+    }
+
+    public void updateContacts(List<Contact> newContacts) {
+        this.contacts = new ArrayList<>(newContacts);
+        notifyDataSetChanged();
+    }
+
+    @NonNull
+    @Override
+    public ContactViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+        View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_contact, parent, false);
+        return new ContactViewHolder(view);
+    }
+
+    @Override
+    public void onBindViewHolder(@NonNull ContactViewHolder holder, int position) {
+        Contact contact = contacts.get(position);
+        holder.bind(contact);
+    }
+
+    @Override
+    public int getItemCount() {
+        return contacts.size();
+    }
+
+    class ContactViewHolder extends RecyclerView.ViewHolder {
+        private CircleImageView ivContactAvatar;
+        private TextView tvContactName;
+        private TextView tvContactNickname;
+        private TextView tvOnlineStatus;
+        private View onlineIndicator;
+
+        public ContactViewHolder(@NonNull View itemView) {
+            super(itemView);
+            ivContactAvatar = itemView.findViewById(R.id.ivContactAvatar);
+            tvContactName = itemView.findViewById(R.id.tvContactName);
+            tvContactNickname = itemView.findViewById(R.id.tvContactNickname);
+            tvOnlineStatus = itemView.findViewById(R.id.tvOnlineStatus);
+            onlineIndicator = itemView.findViewById(R.id.onlineIndicator);
+
+            itemView.setOnClickListener(v -> {
+                if (clickListener != null) {
+                    int position = getBindingAdapterPosition();
+                    if (position != RecyclerView.NO_POSITION) {
+                        clickListener.onContactClick(contacts.get(position));
+                    }
+                }
+            });
+
+            itemView.setOnLongClickListener(v -> {
+                if (longClickListener != null) {
+                    int position = getBindingAdapterPosition();
+                    if (position != RecyclerView.NO_POSITION) {
+                        longClickListener.onContactLongClick(contacts.get(position));
+                        return true;
+                    }
+                }
+                return false;
+            });
+        }
+
+        public void bind(Contact contact) {
+            // Display name or original nickname
+            String displayName = contact.getDisplayNameOrOriginal();
+            tvContactName.setText(displayName);
+            tvContactNickname.setText("@" + contact.originalNickname);
+
+            // Online status (temporarily stored in profileImagePath)
+            boolean isOnline = "online".equals(contact.profileImagePath);
+            
+            if (isOnline) {
+                tvOnlineStatus.setText("Online");
+                tvOnlineStatus.setTextColor(itemView.getContext().getColor(R.color.accent_color));
+                onlineIndicator.setVisibility(View.VISIBLE);
+                onlineIndicator.setBackgroundTintList(
+                    itemView.getContext().getColorStateList(R.color.accent_color)
+                );
+            } else {
+                // Show last seen
+                if (contact.lastSeenDate > 0) {
+                    SimpleDateFormat sdf = new SimpleDateFormat("HH:mm", Locale.getDefault());
+                    String lastSeen = sdf.format(new Date(contact.lastSeenDate));
+                    tvOnlineStatus.setText("Last seen " + lastSeen);
+                } else {
+                    tvOnlineStatus.setText("Offline");
+                }
+                tvOnlineStatus.setTextColor(itemView.getContext().getColor(R.color.text_secondary));
+                onlineIndicator.setVisibility(View.GONE);
+            }
+
+            // Set avatar (default person icon for now)
+            ivContactAvatar.setImageResource(R.drawable.ic_person);
+            if (isOnline) {
+                ivContactAvatar.setBorderColor(itemView.getContext().getColor(R.color.accent_color));
+            } else {
+                ivContactAvatar.setBorderColor(itemView.getContext().getColor(R.color.text_secondary));
+            }
+        }
+    }
+}
+
+--- C:\Users\abdukadir eksilmez\Desktop\whatslite\app\src\main\java\com\whatslite\adapter\MessagesAdapter.java.FullName ---
+package com.whatslite.adapter;
+
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.TextView;
+
+import androidx.annotation.NonNull;
+import androidx.recyclerview.widget.RecyclerView;
+
+import com.whatslite.R;
+import com.whatslite.model.Message;
+
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+import java.util.Locale;
+
+/**
+ * TekrarlÄ± mesajÄ± engellemek iÃ§in Firebase pushKey ile upsert yapar.
+ * addOrUpdateWithKey(key, message) KULLAN!
+ *
+ * item_message_incoming.xml ve item_message_outgoing.xml iÃ§inde
+ * en azÄ±ndan tvText ve tvTime ID'leri olmalÄ±.
+ */
+public class MessagesAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
+
+    public interface MessageActionListener { void onMessageLongClick(Message m, View anchor); }
+
+    private static final int VT_OUT = 1;
+    private static final int VT_IN  = 2;
+
+    private final List<Message> data = new ArrayList<>();
+    private final List<String> keys  = new ArrayList<>(); // Firebase push key paralel dizisi
+    private final String myUid;
+    private final MessageActionListener listener;
+    private final SimpleDateFormat tf = new SimpleDateFormat("HH:mm", Locale.getDefault());
+
+    public MessagesAdapter(String myUid, MessageActionListener l) {
+        this.myUid = myUid;
+        this.listener = l;
+    }
+
+    /** AynÄ± key tekrar edilirse gÃ¼nceller, yoksa ekler. */
+    public void addOrUpdateWithKey(@NonNull String key, @NonNull Message m) {
+        int idx = keys.indexOf(key);
+        if (idx >= 0) {
+            data.set(idx, m);
+            notifyItemChanged(idx);
+        } else {
+            keys.add(key);
+            data.add(m);
+            notifyItemInserted(data.size() - 1);
+        }
+    }
+
+    @Override public int getItemViewType(int position) {
+        Message m = data.get(position);
+        return (m.senderId != null && m.senderId.equals(myUid)) ? VT_OUT : VT_IN;
+    }
+
+    @NonNull @Override
+    public RecyclerView.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int vt) {
+        LayoutInflater inf = LayoutInflater.from(parent.getContext());
+        if (vt == VT_OUT) {
+            View v = inf.inflate(R.layout.item_message_outgoing, parent, false);
+            return new OutVH(v);
+        } else {
+            View v = inf.inflate(R.layout.item_message_incoming, parent, false);
+            return new InVH(v);
+        }
+    }
+
+    @Override
+    public void onBindViewHolder(@NonNull RecyclerView.ViewHolder h, int pos) {
+        Message m = data.get(pos);
+        String time = tf.format(new Date(m.timestamp == 0L ? System.currentTimeMillis() : m.timestamp));
+
+        if (h instanceof OutVH) {
+            OutVH vh = (OutVH) h;
+            vh.tvText.setText(m.text);
+            vh.tvTime.setText(time);
+            vh.itemView.setOnLongClickListener(v -> { if (listener!=null) listener.onMessageLongClick(m, v); return true; });
+        } else {
+            InVH vh = (InVH) h;
+            vh.tvText.setText(m.text);
+            vh.tvTime.setText(time);
+            vh.itemView.setOnLongClickListener(v -> { if (listener!=null) listener.onMessageLongClick(m, v); return true; });
+        }
+    }
+
+    @Override public int getItemCount() { return data.size(); }
+
+    static class OutVH extends RecyclerView.ViewHolder {
+        TextView tvText, tvTime;
+        OutVH(@NonNull View v) {
+            super(v);
+            tvText = v.findViewById(R.id.tvText);
+            tvTime = v.findViewById(R.id.tvTime);
+        }
+    }
+    static class InVH extends RecyclerView.ViewHolder {
+        TextView tvText, tvTime;
+        InVH(@NonNull View v) {
+            super(v);
+            tvText = v.findViewById(R.id.tvText);
+            tvTime = v.findViewById(R.id.tvTime);
+        }
+    }
+}
+
+
+--- C:\Users\abdukadir eksilmez\Desktop\whatslite\app\src\main\java\com\whatslite\adapter\OnlineUsersAdapter.java.FullName ---
+package com.whatslite.adapter;
+
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.TextView;
+import androidx.annotation.NonNull;
+import androidx.recyclerview.widget.RecyclerView;
+import com.whatslite.R;
+import com.whatslite.model.User;
+import java.util.ArrayList;
+import java.util.List;
+
+public class OnlineUsersAdapter extends RecyclerView.Adapter<OnlineUsersAdapter.UserViewHolder> {
+    
+    private List<User> users = new ArrayList<>();
+    private OnUserClickListener clickListener;
+    
+    public interface OnUserClickListener {
+        void onUserClick(User user);
+    }
+    
+    public OnlineUsersAdapter(OnUserClickListener clickListener) {
+        this.clickListener = clickListener;
+    }
+    
+    public void updateUsers(List<User> newUsers) {
+        this.users = new ArrayList<>(newUsers);
+        notifyDataSetChanged();
+    }
+    
+    @NonNull
+    @Override
+    public UserViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+        View view = LayoutInflater.from(parent.getContext())
+                .inflate(R.layout.item_online_user, parent, false);
+        return new UserViewHolder(view);
+    }
+    
+    @Override
+    public void onBindViewHolder(@NonNull UserViewHolder holder, int position) {
+        User user = users.get(position);
+        holder.bind(user);
+    }
+    
+    @Override
+    public int getItemCount() {
+        return users.size();
+    }
+    
+    class UserViewHolder extends RecyclerView.ViewHolder {
+        private TextView tvNickname;
+        private TextView tvLanguage;
+        private View onlineIndicator;
+        
+        public UserViewHolder(@NonNull View itemView) {
+            super(itemView);
+            tvNickname = itemView.findViewById(R.id.tvNickname);
+            tvLanguage = itemView.findViewById(R.id.tvLanguage);
+            onlineIndicator = itemView.findViewById(R.id.onlineIndicator);
+            
+            itemView.setOnClickListener(v -> {
+                int position = getBindingAdapterPosition();
+                if (position != RecyclerView.NO_POSITION && clickListener != null) {
+                    clickListener.onUserClick(users.get(position));
+                }
+            });
+        }
+        
+        public void bind(User user) {
+            // Show first letter of nickname
+            String firstLetter = user.nickname.length() > 0 ? 
+                user.nickname.substring(0, 1).toUpperCase() : "?";
+            tvNickname.setText(firstLetter);
+            tvLanguage.setText(getLanguageName(user.selectedLanguage));
+            onlineIndicator.setVisibility(user.isOnline ? View.VISIBLE : View.GONE);
+        }
+        
+        private String getLanguageName(String code) {
+            switch (code) {
+                case "tr": return "ğŸ‡¹ğŸ‡·";
+                case "en": return "ğŸ‡ºğŸ‡¸";
+                case "es": return "ğŸ‡ªğŸ‡¸";
+                case "fr": return "ğŸ‡«ğŸ‡·";
+                case "de": return "ğŸ‡©ğŸ‡ª";
+                case "it": return "ğŸ‡®ğŸ‡¹";
+                case "pt": return "ğŸ‡µğŸ‡¹";
+                case "ru": return "ğŸ‡·ğŸ‡º";
+                case "ar": return "ğŸ‡¸ğŸ‡¦";
+                case "zh": return "ğŸ‡¨ğŸ‡³";
+                default: return "ğŸŒ";
+            }
+        }
+    }
+}
+
+
+--- C:\Users\abdukadir eksilmez\Desktop\whatslite\app\src\main\java\com\whatslite\database\ChatDatabase.java.FullName ---
+package com.whatslite.database;
+
+import android.content.Context;
+
+import androidx.room.Database;
+import androidx.room.Room;
+import androidx.room.RoomDatabase;
+
+import com.whatslite.model.ChatRoom;
+import com.whatslite.model.Contact;
+import com.whatslite.model.Message;
+import com.whatslite.model.User;
+
+@Database(
+        entities = {
+                User.class,
+                Contact.class,
+                ChatRoom.class,
+                Message.class
+        },
+        version = 1,
+        exportSchema = false
+)
+public abstract class ChatDatabase extends RoomDatabase {
+
+    public abstract UserDao userDao();
+    public abstract ContactDao contactDao();
+    public abstract ChatRoomDao chatRoomDao();
+    public abstract MessageDao messageDao();
+
+    private static volatile ChatDatabase INSTANCE;
+
+    public static ChatDatabase get(Context ctx) {
+        if (INSTANCE == null) {
+            synchronized (ChatDatabase.class) {
+                if (INSTANCE == null) {
+                    INSTANCE = Room.databaseBuilder(
+                                    ctx.getApplicationContext(),
+                                    ChatDatabase.class,
+                                    "whatslite.db"
+                            )
+                            .fallbackToDestructiveMigration()
+                            .build();
+                }
+            }
+        }
+        return INSTANCE;
+    }
+
+    /** Eski Ã§aÄŸrÄ±larla uyumluluk iÃ§in alias */
+    public static ChatDatabase getDatabase(Context ctx) {
+        return get(ctx);
+    }
+}
+
+
+--- C:\Users\abdukadir eksilmez\Desktop\whatslite\app\src\main\java\com\whatslite\database\ChatRoomDao.java.FullName ---
+package com.whatslite.database;
+
+import androidx.lifecycle.LiveData;
+import androidx.room.*;
+import com.whatslite.model.ChatRoom;
+import java.util.List;
+
+@Dao
+public interface ChatRoomDao {
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    void insertChatRoom(ChatRoom chatRoom);
+
+    @Query("SELECT * FROM chat_rooms WHERE participant1 = :nickname OR participant2 = :nickname ORDER BY lastMessageTime DESC")
+    LiveData<List<ChatRoom>> getChatRoomsForUser(String nickname);
+
+    @Query("SELECT * FROM chat_rooms WHERE chatRoomId = :chatRoomId")
+    ChatRoom getChatRoomById(String chatRoomId);
+
+    @Query("UPDATE chat_rooms SET lastMessage = :lastMessage, lastMessageTime = :lastMessageTime WHERE chatRoomId = :chatRoomId")
+    void updateLastMessage(String chatRoomId, String lastMessage, long lastMessageTime);
+
+    @Query("SELECT * FROM chat_rooms WHERE (participant1 = :user1 AND participant2 = :user2) OR (participant1 = :user2 AND participant2 = :user1)")
+    ChatRoom findChatRoomBetweenUsers(String user1, String user2);
+
+    @Delete
+    void deleteChatRoom(ChatRoom chatRoom);
+}
+
+
+--- C:\Users\abdukadir eksilmez\Desktop\whatslite\app\src\main\java\com\whatslite\database\ContactDao.java.FullName ---
+package com.whatslite.database;
+
+import androidx.lifecycle.LiveData;
+import androidx.room.Dao;
+import androidx.room.Delete;
+import androidx.room.Insert;
+import androidx.room.OnConflictStrategy;
+import androidx.room.Query;
+import androidx.room.Update;
+
+import com.whatslite.model.Contact;
+
+import java.util.List;
+
+@Dao
+public interface ContactDao {
+
+    // --- Listelemeler (displayName boÅŸsa originalNickname ile, case-insensitive sÄ±ralama) ---
+    @Query("SELECT * FROM contacts " +
+           "ORDER BY COALESCE(NULLIF(TRIM(displayName), ''), originalNickname) COLLATE NOCASE ASC")
+    LiveData<List<Contact>> getAllContacts();
+
+    @Query("SELECT * FROM contacts " +
+           "ORDER BY COALESCE(NULLIF(TRIM(displayName), ''), originalNickname) COLLATE NOCASE ASC")
+    List<Contact> getAllContactsSync();
+
+    @Query("SELECT * FROM contacts WHERE isBlocked = 0 " +
+           "ORDER BY COALESCE(NULLIF(TRIM(displayName), ''), originalNickname) COLLATE NOCASE ASC")
+    LiveData<List<Contact>> getNonBlockedContacts();
+
+    @Query("SELECT * FROM contacts WHERE isBlocked = 1 " +
+           "ORDER BY COALESCE(NULLIF(TRIM(displayName), ''), originalNickname) COLLATE NOCASE ASC")
+    LiveData<List<Contact>> getBlockedContacts();
+
+    // --- Tekil eriÅŸimler ---
+    @Query("SELECT * FROM contacts WHERE originalNickname = :nickname LIMIT 1")
+    Contact getContactByNickname(String nickname);
+
+    @Query("SELECT * FROM contacts WHERE originalNickname = :nickname LIMIT 1")
+    LiveData<Contact> getContactByNicknameLive(String nickname);
+
+    @Query("SELECT COALESCE(NULLIF(TRIM(displayName), ''), originalNickname) " +
+           "FROM contacts WHERE originalNickname = :nickname LIMIT 1")
+    String getDisplayNameByNickname(String nickname);
+
+    @Query("SELECT isBlocked FROM contacts WHERE originalNickname = :nickname LIMIT 1")
+    int isContactBlocked(String nickname); // 1=blocked, 0=not blocked
+
+    // --- Alan gÃ¼ncellemeleri ---
+    // Case-insensitive bloklama gÃ¼ncellemesi (ContactsActivity uzun basÄ±ÅŸ menÃ¼sÃ¼ iÃ§in)
+    @Query("UPDATE contacts SET isBlocked = :isBlocked " +
+           "WHERE LOWER(TRIM(originalNickname)) = LOWER(TRIM(:nickname))")
+    void updateBlockStatus(String nickname, boolean isBlocked);
+
+    // --- Ekleme / GÃ¼ncelleme / Silme ---
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    long insertContact(Contact contact); // upsert benzeri
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    void insertContacts(List<Contact> contacts);
+
+    @Update
+    void updateContact(Contact contact);
+
+    @Delete
+    void deleteContact(Contact contact);
+
+    @Query("DELETE FROM contacts WHERE LOWER(TRIM(originalNickname)) = LOWER(TRIM(:nickname))")
+    void deleteContactByNickname(String nickname);
+
+    // --- SayaÃ§lar / varlÄ±k kontrolÃ¼ ---
+    @Query("SELECT COUNT(*) FROM contacts")
+    int getContactCount();
+
+    // Case-insensitive varlÄ±k kontrolÃ¼ (trim + lower)
+    @Query("SELECT COUNT(*) FROM contacts " +
+           "WHERE LOWER(TRIM(originalNickname)) = LOWER(TRIM(:nickname))")
+    int isContactExistsCI(String nickname);
+
+    // ContactsActivity ile uyum iÃ§in alias (CI kontrol)
+    @Query("SELECT COUNT(*) FROM contacts " +
+           "WHERE LOWER(TRIM(originalNickname)) = LOWER(TRIM(:nickname))")
+    int isContactExists(String nickname);
+
+    // Filtrelemek iÃ§in kÄ±sa liste (lower+trim)
+    @Query("SELECT LOWER(TRIM(originalNickname)) FROM contacts")
+    List<String> getAllNicknames();
+}
+
+
+--- C:\Users\abdukadir eksilmez\Desktop\whatslite\app\src\main\java\com\whatslite\database\MessageDao.java.FullName ---
+package com.whatslite.database;
+
+import androidx.lifecycle.LiveData;
+import androidx.room.*;
+import com.whatslite.model.Message;
+import java.util.List;
+
+@Dao
+public interface MessageDao {
+    // Var olan
+    @Insert
+    long insertMessage(Message message);
+
+    // UYUMLULUK: BazÄ± sÄ±nÄ±flar insert(...) Ã§aÄŸÄ±rÄ±yor
+    @Insert
+    void insert(Message message);
+
+    @Query("SELECT * FROM messages WHERE chatRoomId = :chatRoomId ORDER BY timestamp ASC")
+    LiveData<List<Message>> getMessagesForChatRoom(String chatRoomId);
+
+    @Query("UPDATE messages SET translatedText = :translatedText, targetLanguage = :targetLanguage, isFromMe = isFromMe WHERE id = :messageId")
+    void updateMessageTranslation(int messageId, String translatedText, String targetLanguage);
+
+    @Query("SELECT * FROM messages WHERE chatRoomId = :chatRoomId ORDER BY timestamp DESC LIMIT 1")
+    Message getLastMessageForChatRoom(String chatRoomId);
+
+    @Delete
+    void deleteMessage(Message message);
+
+    @Query("SELECT * FROM messages ORDER BY timestamp ASC")
+    List<Message> getAllMessages();
+
+    @Query("SELECT * FROM messages WHERE chatRoomId = :chatRoomId ORDER BY timestamp ASC")
+    List<Message> getMessagesForChatRoomSync(String chatRoomId);
+
+    // UYUMLULUK: BazÄ± sÄ±nÄ±flar getByRoomSync(...) Ã§aÄŸÄ±rÄ±yor
+    @Query("SELECT * FROM messages WHERE chatRoomId = :chatRoomId ORDER BY timestamp ASC")
+    List<Message> getByRoomSync(String chatRoomId);
+
+    @Query("SELECT * FROM messages WHERE chatRoomId = :chatRoomId AND id > :afterId ORDER BY timestamp ASC")
+    List<Message> getMessagesAfterId(String chatRoomId, int afterId);
+}
+
+
+--- C:\Users\abdukadir eksilmez\Desktop\whatslite\app\src\main\java\com\whatslite\database\UserDao.java.FullName ---
+package com.whatslite.database;
+
+import androidx.lifecycle.LiveData;
+import androidx.room.Dao;
+import androidx.room.Insert;
+import androidx.room.OnConflictStrategy;
+import androidx.room.Query;
+import androidx.room.Update;
+
+import com.whatslite.model.User;
+
+import java.util.List;
+
+@Dao
+public interface UserDao {
+
+    // --- Ekleme / GÃ¼ncelleme ---
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    void insertUser(User user);
+
+    @Update
+    void updateUser(User user);
+
+    // --- Tekil sorgular ---
+    @Query("SELECT * FROM users WHERE TRIM(nickname) = TRIM(:nickname) LIMIT 1")
+    User getUserByNickname(String nickname);
+
+    @Query("SELECT COUNT(*) FROM users WHERE TRIM(nickname) = TRIM(:nickname)")
+    int isNicknameExists(String nickname);  // 0 = yok, 1+ = var
+
+    // --- Online kullanÄ±cÄ±lar ---
+    @Query("SELECT * FROM users WHERE isOnline = 1")
+    LiveData<List<User>> getOnlineUsers();
+
+    // --- Durum gÃ¼ncellemesi ---
+    @Query("UPDATE users SET isOnline = :isOnline, lastSeen = :lastSeen WHERE TRIM(nickname) = TRIM(:nickname)")
+    void updateUserStatus(String nickname, boolean isOnline, long lastSeen);
+
+    // --- TÃ¼m kullanÄ±cÄ±lar (isteÄŸe baÄŸlÄ± sync liste) ---
+    @Query("SELECT * FROM users ORDER BY nickname COLLATE NOCASE ASC")
+    List<User> getAllUsersSync();
+}
+
+
+--- C:\Users\abdukadir eksilmez\Desktop\whatslite\app\src\main\java\com\whatslite\model\ChatRoom.java.FullName ---
+package com.whatslite.model;
+
+import androidx.annotation.NonNull;
+import androidx.room.Entity;
+import androidx.room.Ignore;
+import androidx.room.PrimaryKey;
+
+@Entity(tableName = "chat_rooms")
+public class ChatRoom {
+    @PrimaryKey @NonNull
+    public String chatRoomId;
+
+    public String participant1;
+    public String participant2;
+    public String lastMessage;
+    public long lastMessageTime;
+    public boolean isActive;
+
+    public ChatRoom() {}
+
+    @Ignore
+    public ChatRoom(String participant1, String participant2) {
+        this.participant1 = participant1;
+        this.participant2 = participant2;
+        this.chatRoomId = generateChatRoomId(participant1, participant2);
+        this.lastMessage = "";
+        this.lastMessageTime = System.currentTimeMillis();
+        this.isActive = true;
+    }
+
+    private String generateChatRoomId(String a, String b) {
+        return a.compareToIgnoreCase(b) <= 0 ? a + "__" + b : b + "__" + a;
+    }
+
+    public String getOtherParticipant(String me) {
+        return me.equals(participant1) ? participant2 : participant1;
+    }
+}
+
+
+--- C:\Users\abdukadir eksilmez\Desktop\whatslite\app\src\main\java\com\whatslite\model\Contact.java.FullName ---
+package com.whatslite.model;
+
+import androidx.annotation.Nullable;
+import androidx.room.Entity;
+import androidx.room.Ignore;
+import androidx.room.PrimaryKey;
+
+/**
+ * Room tablosu: contacts
+ * - originalNickname : KiÅŸinin gerÃ§ek (Firebase) takma adÄ±, tercihen lowercase saklanÄ±r
+ * - displayName      : KullanÄ±cÄ±nÄ±n verdiÄŸi Ã¶zel isim (nullable)
+ * - language         : KiÅŸinin dili (nullable, Firebase'den okunabilir)
+ * - profileImagePath : Profil resmi yolu (nullable)
+ * - isBlocked        : EngellenmiÅŸ mi?
+ * - addedDate        : Eklenme zamanÄ± (epoch millis)
+ * - lastSeenDate     : Son gÃ¶rÃ¼lme (epoch millis)
+ * - pinnedRank       : Sabitleme sÄ±rasÄ± (1..20), 0 = sabit deÄŸil
+ *
+ * Not: ContactDao, originalNickname Ã¼zerinden iÅŸlem yapar.
+ */
+@Entity(tableName = "contacts")
+public class Contact {
+
+    @PrimaryKey(autoGenerate = true)
+    public int id;
+
+    /** Firebaseâ€™deki gerÃ§ek nickname (tercihen normalize/lowercase) */
+    public String originalNickname;
+
+    /** KullanÄ±cÄ±nÄ±n verdiÄŸi Ã¶zel isim (opsiyonel) */
+    @Nullable
+    public String displayName;
+
+    /** KiÅŸinin dili (opsiyonel) */
+    @Nullable
+    public String language;
+
+    /** Profil resmi yolu (opsiyonel) */
+    @Nullable
+    public String profileImagePath;
+
+    /** EngellenmiÅŸ mi? */
+    public boolean isBlocked = false;
+
+    /** Eklenme tarihi (epoch millis) */
+    public long addedDate = 0L;
+
+    /** Son gÃ¶rÃ¼lme (epoch millis) */
+    public long lastSeenDate = 0L;
+
+    /** 1..20 arasÄ± sabitleme sÄ±rasÄ±; 0 = sabit deÄŸil */
+    public int pinnedRank = 0;
+
+    /** Room iÃ§in boÅŸ ctor */
+    public Contact() {}
+
+    @Ignore
+    public Contact(String originalNickname) {
+        this.originalNickname = normalizeNickname(originalNickname);
+        this.addedDate = System.currentTimeMillis();
+        this.lastSeenDate = this.addedDate;
+    }
+
+    @Ignore
+    public Contact(String originalNickname, @Nullable String displayName, @Nullable String language) {
+        this.originalNickname = normalizeNickname(originalNickname);
+        this.displayName = isEmpty(displayName) ? null : displayName;
+        this.language = isEmpty(language) ? null : language;
+        this.isBlocked = false;
+        this.addedDate = System.currentTimeMillis();
+        this.lastSeenDate = this.addedDate;
+        this.pinnedRank = 0;
+    }
+
+    /** UIâ€™de isim gÃ¶sterimi iÃ§in yardÄ±mcÄ± */
+    public String getDisplayNameOrOriginal() {
+        return isEmpty(displayName) ? originalNickname : displayName;
+    }
+
+    /** DÄ±ÅŸarÄ±dan gÃ¼venli set iÃ§in kÃ¼Ã§Ã¼k yardÄ±mcÄ±lar */
+    public static String normalizeNickname(String nick) {
+        if (nick == null) return "";
+        String n = nick.trim();
+        if (n.startsWith("@")) n = n.substring(1);
+        return n.toLowerCase();
+    }
+
+    private static boolean isEmpty(@Nullable String s) {
+        return s == null || s.trim().isEmpty();
+    }
+}
+
+
+--- C:\Users\abdukadir eksilmez\Desktop\whatslite\app\src\main\java\com\whatslite\model\Message.java.FullName ---
+package com.whatslite.model;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.room.Entity;
+import androidx.room.Ignore;
+import androidx.room.PrimaryKey;
+
+/**
+ * Room tablosu: messages
+ * DAO sorgularÄ±yla uyumlu alanlar:
+ *  - id             : @PrimaryKey (int, autoGenerate)  -> afterId / update vs. iÃ§in
+ *  - chatRoomId     : odadaki filtrelemeler iÃ§in
+ *  - text           : mesaj iÃ§eriÄŸi
+ *  - senderId       : gÃ¶nderen uid
+ *  - timestamp      : sÄ±ralama
+ *  - translatedText : Ã§eviri sonucu (nullable)
+ *  - targetLanguage : Ã§eviri hedef dili (nullable)
+ *  - isFromMe       : benim mesajÄ±m mÄ±?
+ *
+ * Firebase push key'i (opsiyonel) iÃ§in remoteId ekledik; Room'a dahil deÄŸil.
+ * Test/Uyumluluk iÃ§in: senderNickname, sender, originalText (Room dÄ±ÅŸÄ±nda)
+ */
+@Entity(tableName = "messages")
+public class Message {
+
+    @PrimaryKey(autoGenerate = true)
+    public int id;
+
+    @NonNull
+    public String chatRoomId = "";
+
+    @NonNull
+    public String text = "";
+
+    @NonNull
+    public String senderId = "";
+
+    public long timestamp = 0L;
+
+    @Nullable
+    public String translatedText;
+
+    @Nullable
+    public String targetLanguage;
+
+    public boolean isFromMe = false;
+
+    /** --- Room dÄ±ÅŸÄ± alanlar (test/geri uyumluluk) --- */
+    @Ignore @Nullable public String remoteId;        // Firebase push key
+    @Ignore @Nullable public String senderNickname;  // eski test yardÄ±mcÄ±larÄ± iÃ§in
+    @Ignore @Nullable public String sender;          // eski test yardÄ±mcÄ±larÄ± iÃ§in
+    @Ignore @Nullable public String originalText;    // eski test yardÄ±mcÄ±larÄ± iÃ§in
+
+    public Message() { /* Room iÃ§in boÅŸ ctor */ }
+
+    @Ignore
+    public Message(@NonNull String chatRoomId,
+                   @NonNull String text,
+                   @NonNull String senderId,
+                   long timestamp,
+                   boolean isFromMe) {
+        this.chatRoomId = chatRoomId;
+        this.text = text;
+        this.senderId = senderId;
+        this.timestamp = timestamp;
+        this.isFromMe = isFromMe;
+    }
+}
+
+
+--- C:\Users\abdukadir eksilmez\Desktop\whatslite\app\src\main\java\com\whatslite\model\User.java.FullName ---
+package com.whatslite.model;
+
+import androidx.annotation.NonNull;
+import androidx.room.Entity;
+import androidx.room.Ignore;
+import androidx.room.PrimaryKey;
+
+@Entity(tableName = "users")
+public class User {
+    @PrimaryKey
+    @NonNull
+    public String nickname;
+    
+    public String selectedLanguage;
+    public boolean isOnline;
+    public long lastSeen;
+    
+    @Ignore
+    public User(String nickname, String selectedLanguage) {
+        this.nickname = nickname;
+        this.selectedLanguage = selectedLanguage;
+        this.isOnline = false;
+        this.lastSeen = System.currentTimeMillis();
+    }
+    
+    public User() {} // Room requires empty constructor
+}
+
+
+--- C:\Users\abdukadir eksilmez\Desktop\whatslite\app\src\main\java\com\whatslite\service\DeepLClient.java.FullName ---
+package com.whatslite.service;
+
+import android.util.Log;
+import androidx.annotation.Nullable;
+import com.whatslite.BuildConfig;
+import org.json.JSONArray;
+import org.json.JSONObject;
+import okhttp3.*;
+
+public class DeepLClient {
+    private static final MediaType FORM = MediaType.get("application/x-www-form-urlencoded; charset=utf-8");
+    private final OkHttpClient http = new OkHttpClient();
+
+    /** Ã¶r: targetLang "TR", sourceLang null bÄ±rak â†’ otomatik algÄ±lar */
+    public @Nullable String translate(String text, String targetLang, @Nullable String sourceLang) {
+        try {
+            String key  = BuildConfig.DEEPL_API_KEY == null ? "" : BuildConfig.DEEPL_API_KEY;
+            String host = BuildConfig.DEEPL_API_HOST == null ? "api-free.deepl.com" : BuildConfig.DEEPL_API_HOST;
+            if (key.isEmpty() || text == null || text.trim().isEmpty()) return null;
+
+            StringBuilder sb = new StringBuilder();
+            sb.append("auth_key=").append(url(textEncode(key)));
+            sb.append("&text=").append(url(textEncode(text)));
+            sb.append("&target_lang=").append(url(targetLang.toUpperCase()));
+            if (sourceLang != null && !sourceLang.isEmpty()) {
+                sb.append("&source_lang=").append(url(sourceLang.toUpperCase()));
+            }
+            Request req = new Request.Builder()
+                    .url("https://" + host + "/v2/translate")
+                    .post(RequestBody.create(sb.toString(), FORM))
+                    .build();
+
+            try (Response resp = http.newCall(req).execute()) {
+                if (!resp.isSuccessful()) {
+                    Log.e("DeepL", "HTTP " + resp.code() + ": " + (resp.body()!=null?resp.body().string():""));
+                    return null;
+                }
+                String body = resp.body() != null ? resp.body().string() : "";
+                JSONObject json = new JSONObject(body);
+                JSONArray arr = json.getJSONArray("translations");
+                if (arr.length() == 0) return null;
+                JSONObject t0 = arr.getJSONObject(0);
+                return t0.getString("text");
+            }
+        } catch (Exception e) {
+            Log.e("DeepL", "translate error", e);
+            return null;
+        }
+    }
+
+    private static String url(String s) { try { return java.net.URLEncoder.encode(s, "UTF-8"); } catch (Exception e) { return ""; } }
+    private static String textEncode(String s) { return s; }
+}
+
+
+--- C:\Users\abdukadir eksilmez\Desktop\whatslite\app\src\main\java\com\whatslite\service\DeepLTranslationService.java.FullName ---
+package com.whatslite.service;
+
+import android.content.Context;
+
+public final class DeepLTranslationService {
+    private DeepLTranslationService(){}
+
+    public interface Callback {
+        void onSuccess(String translated);
+        void onError(Throwable t);
+    }
+
+    public static void translateAsync(Context ctx, String text, String from, String to, Callback cb) {
+        // Stub: gerÃ§ek entegrasyon yerine aynÄ±sÄ±nÄ± dÃ¶ndÃ¼rÃ¼r
+        try { cb.onSuccess(text); } catch (Exception e) { cb.onError(e); }
+    }
+}
+
+
+--- C:\Users\abdukadir eksilmez\Desktop\whatslite\app\src\main\java\com\whatslite\service\FirebaseBackgroundService.java.FullName ---
+package com.whatslite.service;
+
+import android.app.Service;
+import android.content.Intent;
+import android.os.IBinder;
+import android.util.Log;
+
+import androidx.annotation.Nullable;
+
+public class FirebaseBackgroundService extends Service {
+    private static final String TAG = "FirebaseBgService";
+
+    @Nullable
+    @Override
+    public IBinder onBind(Intent intent) {
+        return null; // Bound service deÄŸil
+    }
+
+    @Override
+    public int onStartCommand(Intent intent, int flags, int startId) {
+        Log.d(TAG, "Started");
+        // Burada arka plan sync, lightweight iÅŸler yapÄ±labilir.
+        return START_STICKY;
+    }
+}
+
+
+--- C:\Users\abdukadir eksilmez\Desktop\whatslite\app\src\main\java\com\whatslite\service\FirebaseManager.java.FullName ---
+package com.whatslite.service;
+
+import android.content.Context;
+import android.util.Log;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+
+import com.google.firebase.FirebaseApp;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.database.ChildEventListener;
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.ServerValue;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+
+/**
+ * Tek merkez: auth, users, rooms, inbox.
+ */
+public class FirebaseManager {
+
+    private static final String TAG = "FirebaseManager";
+
+    // ===== Singleton =====
+    private static FirebaseManager INSTANCE;
+    public static FirebaseManager getInstance() {
+        if (INSTANCE == null) INSTANCE = new FirebaseManager();
+        return INSTANCE;
+    }
+    private FirebaseManager() {}
+
+    // ===== Alanlar =====
+    private Context appCtx;
+    private FirebaseAuth auth;
+    private FirebaseDatabase db;
+    private DatabaseReference usersRef;
+    private DatabaseReference roomsRef;
+    private DatabaseReference inboxRef;
+
+    private String myUid;
+    private String myNickname;
+    private String myLanguage;
+
+    private final List<FirebaseListener> listeners = new ArrayList<>();
+    private com.google.firebase.database.ValueEventListener usersValueListener;
+
+    private ChildEventListener roomChildListener;
+    private DatabaseReference currentRoomMessagesRef;
+
+    private ChildEventListener inboxListener;
+
+    // ===== Listener tipleri / DTO'lar =====
+    public interface FirebaseListener {
+        default void onUserListUpdated(@NonNull List<ChatUser> users) {}
+        default void onJoined(@NonNull String nickname, @NonNull String language) {}
+        default void onUsersListeningStarted() {}
+        default void onUsersListeningStopped() {}
+    }
+    public interface SendCallback { void onResult(boolean ok, @Nullable String err); }
+    public interface MessageStream { void onMessage(@NonNull MessageDTO m); }
+
+    public interface InboxListener { void onItem(@NonNull InboxItem item); }
+
+    public static class ChatUser {
+        public String uid;
+        public String nickname;
+        public String language;
+        public boolean isOnline;
+        public long lastSeen;
+    }
+    public static class MessageDTO {
+        public String id;              // push key
+        public String text;
+        public String senderId;
+        public String senderNickname;
+        public long timestamp;
+        public String translatedText;
+        public String targetLanguage;
+    }
+    public static class InboxItem {
+        public String peer;     // karÅŸÄ± tarafÄ±n nicknameâ€™i
+        public String roomId;
+        public String lastText;
+        public long   timestamp;
+        public boolean hasUnread;
+    }
+
+    // ===== Init / Auth =====
+    public synchronized void setContext(@NonNull Context ctx) {
+        if (appCtx != null) return;
+        appCtx = ctx.getApplicationContext();
+
+        if (FirebaseApp.getApps(appCtx).isEmpty()) {
+            FirebaseApp.initializeApp(appCtx);
+        }
+
+        auth = FirebaseAuth.getInstance();
+        db = FirebaseDatabase.getInstance();
+        usersRef = db.getReference("users");
+        roomsRef = db.getReference("rooms");
+        inboxRef = db.getReference("inbox");
+    }
+
+    public String getMyUid() { return myUid; }
+    public String getMyLanguage() { return myLanguage; }
+    public String getMyNickname() { return myNickname; }
+
+    public void addListener(@NonNull FirebaseListener l) { if (!listeners.contains(l)) listeners.add(l); }
+    public void removeListener(@NonNull FirebaseListener l) { listeners.remove(l); }
+
+    public void joinChat(@NonNull String nickname, @NonNull String language) {
+        ensureContext();
+        final String normalized = normalize(nickname);
+        this.myNickname = normalized;
+        this.myLanguage = language;
+
+        if (auth.getCurrentUser() == null) {
+            auth.signInAnonymously()
+                .addOnSuccessListener(r -> {
+                    myUid = r.getUser() != null ? r.getUser().getUid() : null;
+                    upsertUserNode(normalized, language, true);
+                    for (FirebaseListener l : listeners) l.onJoined(normalized, language);
+                })
+                .addOnFailureListener(e -> Log.e(TAG, "Anonymous sign-in FAIL: " + e));
+        } else {
+            myUid = auth.getCurrentUser().getUid();
+            upsertUserNode(normalized, language, true);
+            for (FirebaseListener l : listeners) l.onJoined(normalized, language);
+        }
+    }
+
+    // ===== Users =====
+    public void startUsersListener() {
+        if (usersValueListener != null) return;
+        for (FirebaseListener l : listeners) l.onUsersListeningStarted();
+
+        usersValueListener = usersRef.addValueEventListener(new com.google.firebase.database.ValueEventListener() {
+            @Override public void onDataChange(@NonNull DataSnapshot snapshot) {
+                List<ChatUser> list = new ArrayList<>();
+                for (DataSnapshot c : snapshot.getChildren()) {
+                    ChatUser u = new ChatUser();
+                    u.nickname = c.getKey();
+                    Object val = c.getValue();
+                    if (val instanceof Map) {
+                        Map<?, ?> m = (Map<?, ?>) val;
+                        Object oUid = m.get("uid");
+                        Object oLang = m.get("language");
+                        Object oOnline = m.get("isOnline");
+                        Object oLast = m.get("lastSeen");
+                        u.uid = oUid == null ? null : String.valueOf(oUid);
+                        u.language = oLang == null ? null : String.valueOf(oLang);
+                        u.isOnline = oOnline instanceof Boolean ? (Boolean) oOnline : false;
+                        u.lastSeen = (oLast instanceof Number) ? ((Number) oLast).longValue() : 0L;
+                    }
+                    list.add(u);
+                }
+                for (FirebaseListener l : listeners) l.onUserListUpdated(list);
+            }
+            @Override public void onCancelled(@NonNull DatabaseError error) {
+                Log.e(TAG, "users listener cancelled: " + error);
+            }
+        });
+    }
+
+    public void stopUsersListener() {
+        if (usersValueListener != null) {
+            usersRef.removeEventListener(usersValueListener);
+            usersValueListener = null;
+        }
+        for (FirebaseListener l : listeners) l.onUsersListeningStopped();
+    }
+
+    // ===== Rooms =====
+    public void startListeningRoom(@NonNull String roomId, @NonNull MessageStream stream) {
+        stopListeningRoom();
+
+        currentRoomMessagesRef = roomsRef.child(roomId).child("messages");
+        roomChildListener = currentRoomMessagesRef
+                .orderByChild("timestamp")
+                .addChildEventListener(new ChildEventListener() {
+                    @Override public void onChildAdded(@NonNull DataSnapshot snap, @Nullable String prev) {
+                        MessageDTO dto = snapshotToMessageDTO(snap);
+                        if (dto != null) stream.onMessage(dto);
+                    }
+                    @Override public void onChildChanged(@NonNull DataSnapshot snap, @Nullable String prev) {
+                        MessageDTO dto = snapshotToMessageDTO(snap);
+                        if (dto != null) stream.onMessage(dto); // upsert edecek
+                    }
+                    @Override public void onChildRemoved(@NonNull DataSnapshot snap) {}
+                    @Override public void onChildMoved(@NonNull DataSnapshot snap, @Nullable String prev) {}
+                    @Override public void onCancelled(@NonNull DatabaseError error) {
+                        Log.e(TAG, "room listener cancelled: " + error);
+                    }
+                });
+    }
+
+    public void stopListeningRoom() {
+        if (roomChildListener != null && currentRoomMessagesRef != null) {
+            currentRoomMessagesRef.removeEventListener(roomChildListener);
+        }
+        roomChildListener = null;
+        currentRoomMessagesRef = null;
+    }
+
+    public void sendMessage(@NonNull String roomId,
+                            @NonNull String text,
+                            @NonNull SendCallback cb) {
+        if (myUid == null) { cb.onResult(false, "Auth not ready"); return; }
+        DatabaseReference msgRef = roomsRef.child(roomId).child("messages").push();
+
+        Map<String, Object> m = new HashMap<>();
+        m.put("text", text);
+        m.put("senderId", myUid);
+        m.put("senderNickname", myNickname);
+        m.put("timestamp", ServerValue.TIMESTAMP);
+        m.put("translatedText", null);
+        m.put("targetLanguage", null);
+
+        msgRef.setValue(m)
+                .addOnSuccessListener(v -> cb.onResult(true, null))
+                .addOnFailureListener(e -> cb.onResult(false, e.getMessage()));
+    }
+
+    /** GÃ¶nder + peer'in inbox'Ä±nÄ± gÃ¼ncelle (karÅŸÄ± taraf eklememiÅŸ olsa da gÃ¶rÃ¼nÃ¼r). */
+    public void sendMessage(@NonNull String roomId,
+                            @NonNull String text,
+                            @NonNull String peerNickname,
+                            @NonNull SendCallback cb) {
+        sendMessage(roomId, text, (ok, err) -> {
+            if (!ok) { cb.onResult(false, err); return; }
+            try {
+                String peer = normalize(peerNickname);
+                String me   = myNickname != null ? myNickname : "";
+                Map<String, Object> inbox = new HashMap<>();
+                inbox.put("from", me);
+                inbox.put("roomId", roomId);
+                inbox.put("lastText", text);
+                inbox.put("timestamp", ServerValue.TIMESTAMP);
+                inbox.put("hasUnread", true);
+                inboxRef.child(peer).child(me).updateChildren(inbox)
+                        .addOnSuccessListener(v -> cb.onResult(true, null))
+                        .addOnFailureListener(e -> cb.onResult(false, e.getMessage()));
+            } catch (Exception ex) {
+                Log.e(TAG, "inbox update failed", ex);
+                cb.onResult(true, null);
+            }
+        });
+    }
+
+    /** Sohbet aÃ§Ä±ldÄ±ÄŸÄ±nda benim inbox Ã¶ÄŸemi okundu yap. */
+    public void markInboxRead(@NonNull String peerNickname) {
+        try {
+            String me   = myNickname != null ? myNickname : "";
+            String peer = normalize(peerNickname);
+            Map<String, Object> patch = new HashMap<>();
+            patch.put("hasUnread", false);
+            patch.put("lastReadTs", ServerValue.TIMESTAMP);
+            inboxRef.child(me).child(peer).updateChildren(patch);
+        } catch (Exception e) {
+            Log.e(TAG, "markInboxRead failed", e);
+        }
+    }
+
+    /** Uygulama aÃ§Ä±kken benim inboxâ€™Ä±mÄ± dinle (listeyi gÃ¼ncelle ve bildirim gÃ¶ster). */
+    public void startInboxListenerForMe(@NonNull InboxListener l) {
+        stopInboxListener();
+        if (myNickname == null) return;
+        inboxListener = inboxRef.child(myNickname)
+                .orderByChild("timestamp")
+                .addChildEventListener(new ChildEventListener() {
+                    private void handle(@NonNull DataSnapshot s) {
+                        try {
+                            String peer = s.getKey();
+                            Object val = s.getValue();
+                            if (!(val instanceof Map)) return;
+                            Map<?, ?> m = (Map<?, ?>) val;
+
+                            InboxItem it = new InboxItem();
+                            it.peer      = peer;
+                            it.roomId    = str(m.get("roomId"));
+                            it.lastText  = str(m.get("lastText"));
+                            it.timestamp = num(m.get("timestamp"));
+                            Object hu = m.get("hasUnread");
+                            it.hasUnread = (hu instanceof Boolean) ? (Boolean) hu : false;
+
+                            l.onItem(it);
+                        } catch (Exception e) {
+                            Log.e(TAG, "inbox parse error", e);
+                        }
+                    }
+                    @Override public void onChildAdded(@NonNull DataSnapshot snapshot, @Nullable String previousChildName) { handle(snapshot); }
+                    @Override public void onChildChanged(@NonNull DataSnapshot snapshot, @Nullable String previousChildName) { handle(snapshot); }
+                    @Override public void onChildRemoved(@NonNull DataSnapshot snapshot) {}
+                    @Override public void onChildMoved(@NonNull DataSnapshot snapshot, @Nullable String previousChildName) {}
+                    @Override public void onCancelled(@NonNull DatabaseError error) { Log.e(TAG, "inbox cancelled: " + error); }
+                });
+    }
+
+    public void stopInboxListener() {
+        if (inboxListener != null && myNickname != null) {
+            inboxRef.child(myNickname).removeEventListener(inboxListener);
+        }
+        inboxListener = null;
+    }
+
+    /** Debug yardÄ±mcÄ±larÄ± iÃ§in PUBLIC. */
+    public void ensureUsersNode(@NonNull String nickname, @NonNull String language) {
+        String n = normalize(nickname);
+        Map<String, Object> map = new HashMap<>();
+        map.put("uid", myUid == null ? "" : myUid);
+        map.put("language", language);
+        map.put("isOnline", true);
+        map.put("lastSeen", ServerValue.TIMESTAMP);
+        usersRef.child(n).updateChildren(map);
+    }
+
+    // ===== YardÄ±mcÄ±lar =====
+    public static String roomIdFor(@NonNull String a, @NonNull String b) {
+        String na = normalize(a);
+        String nb = normalize(b);
+        return (na.compareTo(nb) <= 0) ? na + "__" + nb : nb + "__" + na;
+    }
+    public static String normalize(@NonNull String s) {
+        String t = s.trim();
+        if (t.startsWith("@")) t = t.substring(1);
+        return t.toLowerCase(Locale.ROOT);
+    }
+    private void ensureContext() {
+        if (appCtx == null) throw new IllegalStateException("Call setContext(context) first.");
+    }
+    private void upsertUserNode(@NonNull String nickname, @NonNull String language, boolean online) {
+        Map<String, Object> map = new HashMap<>();
+        map.put("uid", myUid == null ? "" : myUid);
+        map.put("language", language);
+        map.put("isOnline", online);
+        map.put("lastSeen", ServerValue.TIMESTAMP);
+
+        DatabaseReference me = usersRef.child(nickname);
+        me.updateChildren(map);
+
+        Map<String, Object> off = new HashMap<>();
+        off.put("isOnline", false);
+        off.put("lastSeen", ServerValue.TIMESTAMP);
+        me.onDisconnect().updateChildren(off);
+    }
+    @Nullable
+    private static com.whatslite.service.FirebaseManager.MessageDTO snapshotToMessageDTO(@NonNull DataSnapshot s) {
+        Object val = s.getValue();
+        if (!(val instanceof Map)) return null;
+        Map<?, ?> m = (Map<?, ?>) val;
+
+        MessageDTO dto = new MessageDTO();
+        dto.id = s.getKey();
+        dto.text = str(m.get("text"));
+        dto.senderId = str(m.get("senderId"));
+        dto.senderNickname = str(m.get("senderNickname"));
+        dto.timestamp = num(m.get("timestamp"));
+        dto.translatedText = (m.get("translatedText") == null) ? null : String.valueOf(m.get("translatedText"));
+        dto.targetLanguage = (m.get("targetLanguage") == null) ? null : String.valueOf(m.get("targetLanguage"));
+        return dto;
+    }
+    private static String str(Object o) { return o == null ? null : String.valueOf(o); }
+    private static long num(Object o) { return (o instanceof Number) ? ((Number) o).longValue() : 0L; }
+}
+
+
+--- C:\Users\abdukadir eksilmez\Desktop\whatslite\app\src\main\java\com\whatslite\service\GeminiTranslationService.java.FullName ---
+package com.whatslite.service;
+
+import android.content.Context;
+
+public final class GeminiTranslationService {
+    private GeminiTranslationService(){}
+
+    public interface Callback {
+        void onSuccess(String translated);
+        void onError(Throwable t);
+    }
+
+    public static boolean isConfigured() {
+        // Stub: gerÃ§ek anahtar kontrolÃ¼ burada yapÄ±lÄ±r
+        return false;
+    }
+
+    public static void translateWithAI(Context ctx, String text, String from, String to, Callback cb) {
+        // Stub: yapÄ±landÄ±rÄ±lmadÄ±ysa hata verelim
+        if (!isConfigured()) { cb.onError(new IllegalStateException("Gemini not configured")); return; }
+        cb.onSuccess(text);
+    }
+}
+
+
+--- C:\Users\abdukadir eksilmez\Desktop\whatslite\app\src\main\java\com\whatslite\service\MyFirebaseMessagingService.java.FullName ---
+package com.whatslite.service;
+
+import android.content.Context;
+import android.content.SharedPreferences;
+import android.util.Log;
+
+import androidx.annotation.NonNull;
+
+import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.messaging.FirebaseMessaging;
+import com.google.firebase.messaging.FirebaseMessagingService;
+import com.google.firebase.messaging.RemoteMessage;
+import com.whatslite.database.ChatDatabase;
+import com.whatslite.database.ContactDao;
+import com.whatslite.model.Contact;
+
+import java.util.Locale;
+import java.util.Map;
+
+/**
+ * - onNewToken: token'Ä± /users/<myNick>/tokens/<token>=true altÄ±na yazar
+ * - onMessageReceived: bildirimi gÃ¶sterir, gerekiyorsa kiÅŸiyi yerelde otomatik ekler
+ */
+public class MyFirebaseMessagingService extends FirebaseMessagingService {
+
+    private static final String TAG = "FCM";
+
+    @Override
+    public void onNewToken(@NonNull String token) {
+        super.onNewToken(token);
+        Log.d(TAG, "FCM token: " + token);
+        registerTokenWithServer(getApplicationContext(), token);
+    }
+
+    @Override
+    public void onMessageReceived(@NonNull RemoteMessage msg) {
+        super.onMessageReceived(msg);
+
+        Map<String, String> d = msg.getData();
+        String fromNick = d.get("fromNick");
+        String text     = d.get("text");
+        String roomId   = d.get("roomId");
+
+        if (fromNick == null) fromNick = "unknown";
+        if (text == null) text = "";
+
+        // 1) Bildirimi gÃ¶ster
+        NotificationHelper.showNewMessage(getApplicationContext(), fromNick, text, roomId);
+
+        // 2) Yerelde kiÅŸi yoksa otomatik ekle (listeye dÃ¼ÅŸmesi iÃ§in)
+        autoAddContactIfMissing(getApplicationContext(), fromNick);
+    }
+
+    /** Uygulama iÃ§inden Ã§aÄŸÄ±rÄ±labilsin diye statik yardÄ±mcÄ± */
+    public static void registerCurrentToken(Context ctx, String myNick) {
+        FirebaseMessaging.getInstance().getToken()
+                .addOnSuccessListener(token -> {
+                    Log.d(TAG, "registerCurrentToken: " + token);
+                    SharedPreferences p = ctx.getSharedPreferences("ChatTranslator", Context.MODE_PRIVATE);
+                    p.edit().putString("fcm_token", token).apply();
+                    if (myNick != null && !myNick.trim().isEmpty()) {
+                        writeTokenToDb(normalize(myNick), token);
+                    }
+                });
+    }
+
+    private static void registerTokenWithServer(Context ctx, String token){
+        SharedPreferences p = ctx.getSharedPreferences("ChatTranslator", Context.MODE_PRIVATE);
+        p.edit().putString("fcm_token", token).apply();
+        String myNick = p.getString("nickname", null);
+        if (myNick != null && !myNick.trim().isEmpty()){
+            writeTokenToDb(normalize(myNick), token);
+        }
+    }
+
+    private static void writeTokenToDb(String myNick, String token){
+        FirebaseDatabase.getInstance()
+                .getReference("users")
+                .child(myNick)
+                .child("tokens")
+                .child(token)
+                .setValue(true);
+    }
+
+    private static String normalize(String s){
+        if (s == null) return "";
+        String t = s.trim();
+        if (t.startsWith("@")) t = t.substring(1);
+        return t.toLowerCase(Locale.ROOT);
+    }
+
+    private void autoAddContactIfMissing(Context ctx, String fromNick){
+        ContactDao dao = ChatDatabase.getDatabase(ctx).contactDao();
+        String norm = normalize(fromNick);
+        new Thread(() -> {
+            int exists = dao.isContactExistsCI(norm);
+            if (exists == 0){
+                Contact c = new Contact(norm, "", "");
+                dao.insertContact(c);
+            }
+        }).start();
+    }
+}
+
+
+--- C:\Users\abdukadir eksilmez\Desktop\whatslite\app\src\main\java\com\whatslite\service\NotificationHelper.java.FullName ---
+package com.whatslite.service;
+
+import android.app.Notification;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
+import android.content.Context;
+import android.content.Intent;
+import android.os.Build;
+
+import androidx.core.app.NotificationCompat;
+
+import com.whatslite.R;
+import com.whatslite.ui.ChatActivity;
+
+public final class NotificationHelper {
+    private static final String CHANNEL_ID = "whatslite_general";
+    private static final String CHANNEL_NAME = "WhatsLite Notifications";
+
+    private NotificationHelper(){}
+
+    private static void ensureChannel(Context ctx){
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O){
+            NotificationChannel ch = new NotificationChannel(
+                    CHANNEL_ID, CHANNEL_NAME, NotificationManager.IMPORTANCE_HIGH);
+            ch.setDescription("Chat messages and alerts");
+            NotificationManager nm = (NotificationManager) ctx.getSystemService(Context.NOTIFICATION_SERVICE);
+            nm.createNotificationChannel(ch);
+        }
+    }
+
+    public static void showNewMessage(Context ctx, String fromNick, String text, String roomId){
+        ensureChannel(ctx);
+
+        Intent tap = new Intent(ctx, ChatActivity.class);
+        tap.putExtra("peerNickname", fromNick);
+        tap.putExtra("roomId", roomId);
+        tap.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+
+        PendingIntent pi = PendingIntent.getActivity(
+                ctx, (fromNick + "_" + roomId).hashCode(), tap,
+                Build.VERSION.SDK_INT >= 31
+                        ? PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+                        : PendingIntent.FLAG_UPDATE_CURRENT);
+
+        Notification n = new NotificationCompat.Builder(ctx, CHANNEL_ID)
+                .setSmallIcon(R.drawable.ic_translate)
+                .setContentTitle(fromNick)
+                .setContentText(text)
+                .setStyle(new NotificationCompat.BigTextStyle().bigText(text))
+                .setAutoCancel(true)
+                .setContentIntent(pi)
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .build();
+
+        NotificationManager nm = (NotificationManager) ctx.getSystemService(Context.NOTIFICATION_SERVICE);
+        nm.notify(("msg_"+fromNick).hashCode(), n);
+    }
+}
+
+
+--- C:\Users\abdukadir eksilmez\Desktop\whatslite\app\src\main\java\com\whatslite\service\NotificationService.java.FullName ---
+package com.whatslite.service;
+
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
+import android.content.Context;
+import android.content.Intent;
+import android.graphics.Color;
+import android.os.Build;
+
+import androidx.core.app.NotificationCompat;
+
+import com.whatslite.R;
+
+/**
+ * Bildirim servisi â€“ tÄ±klanÄ±nca ChatActivity'yi aÃ§ar.
+ * DÄ°KKAT: Bu dosyada SADECE NotificationService public sÄ±nÄ±fÄ± olmalÄ±.
+ */
+public class NotificationService {
+
+    private static final String CHANNEL_ID = "msgs";
+    private static final String CHANNEL_NAME = "Messages";
+
+    private static void ensureChannel(Context ctx) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            NotificationChannel ch = new NotificationChannel(
+                    CHANNEL_ID, CHANNEL_NAME, NotificationManager.IMPORTANCE_DEFAULT);
+            ch.enableLights(true);
+            ch.setLightColor(Color.GREEN);
+            ch.enableVibration(true);
+            NotificationManager nm = (NotificationManager) ctx.getSystemService(Context.NOTIFICATION_SERVICE);
+            if (nm != null) nm.createNotificationChannel(ch);
+        }
+    }
+
+    /**
+     * @param context      app context
+     * @param peerNickname karÅŸÄ± tarafÄ±n nick'i
+     * @param previewText  Ã¶nizleme metni
+     */
+    public static void showIncomingMessageNotification(Context context,
+                                                       String peerNickname,
+                                                       String previewText) {
+        ensureChannel(context);
+
+        // Tam nitelikli sÄ±nÄ±f adÄ±yla ChatActivity
+        Intent intent = new Intent(context, com.whatslite.ui.ChatActivity.class);
+        intent.putExtra("peerNickname", peerNickname);
+        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+
+        PendingIntent pi = PendingIntent.getActivity(
+                context,
+                (peerNickname == null ? 0 : peerNickname.hashCode()),
+                intent,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+        );
+
+        NotificationCompat.Builder b = new NotificationCompat.Builder(context, CHANNEL_ID)
+                .setSmallIcon(R.drawable.ic_chat) // yoksa ic_translate kullan
+                .setContentTitle(peerNickname == null ? context.getString(R.string.app_name) : peerNickname)
+                .setContentText(previewText == null ? "" : previewText)
+                .setContentIntent(pi)
+                .setAutoCancel(true)
+                .setPriority(NotificationCompat.PRIORITY_DEFAULT);
+
+        NotificationManager nm = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+        if (nm != null) {
+            int id = (peerNickname == null ? 1 : Math.abs(peerNickname.hashCode()));
+            nm.notify(id, b.build());
+        }
+    }
+}
+
+
+--- C:\Users\abdukadir eksilmez\Desktop\whatslite\app\src\main\java\com\whatslite\service\SmartTranslationService.java.FullName ---
+package com.whatslite.service;
+
+import android.content.Context;
+import android.content.SharedPreferences;
+import android.util.Log;
+
+public final class SmartTranslationService {
+    private SmartTranslationService(){}
+
+    private static final String PREFS = "whatslite_prefs";
+    private static final String KEY_PROVIDER = "translation_provider";
+
+    public enum TranslationProvider { DEEPL, GEMINI, AUTO }
+
+    public interface Callback {
+        void onSuccess(String translated);
+        void onError(Throwable t);
+    }
+
+    // SettingsActivity kullanÄ±mÄ±na uygun setter
+    public static void setPreferredProvider(Context ctx, TranslationProvider provider) {
+        SharedPreferences sp = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
+        sp.edit().putString(KEY_PROVIDER, provider.name()).apply();
+    }
+
+    public static TranslationProvider getPreferredProvider(Context ctx) {
+        SharedPreferences sp = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
+        try {
+            String v = sp.getString(KEY_PROVIDER, TranslationProvider.AUTO.name());
+            return TranslationProvider.valueOf(v);
+        } catch (Exception e) {
+            return TranslationProvider.AUTO;
+        }
+    }
+
+    public static void translate(Context context, String text, String from, String to, Callback cb) {
+        TranslationProvider pref = getPreferredProvider(context);
+        switch (pref) {
+            case DEEPL:
+                tryDeepLThenFailoverToGemini(context, text, from, to, cb, false);
+                break;
+            case GEMINI:
+                tryGeminiThenFailoverToDeepL(context, text, from, to, cb, false);
+                break;
+            case AUTO:
+            default:
+                // Ã–nce DeepL dene, olmazsa Gemini
+                tryDeepLThenFailoverToGemini(context, text, from, to, cb, true);
+                break;
+        }
+    }
+
+    private static void tryDeepLThenFailoverToGemini(Context ctx, String text, String from, String to, Callback cb, boolean allowFailover) {
+        try {
+            DeepLTranslationService.translateAsync(ctx, text, from, to, new DeepLTranslationService.Callback() {
+                @Override public void onSuccess(String translated) { cb.onSuccess(translated); }
+                @Override public void onError(Throwable t) {
+                    Log.w("SmartTranslation", "DeepL failed", t);
+                    if (allowFailover) tryGemini(ctx, text, from, to, cb);
+                    else cb.onError(t);
+                }
+            });
+        } catch (Throwable t) {
+            if (allowFailover) tryGemini(ctx, text, from, to, cb); else cb.onError(t);
+        }
+    }
+
+    private static void tryGeminiThenFailoverToDeepL(Context ctx, String text, String from, String to, Callback cb, boolean allowFailover) {
+        if (GeminiTranslationService.isConfigured()) {
+            GeminiTranslationService.translateWithAI(ctx, text, from, to, new GeminiTranslationService.Callback() {
+                @Override public void onSuccess(String translated) { cb.onSuccess(translated); }
+                @Override public void onError(Throwable t) {
+                    if (allowFailover) {
+                        tryDeepLThenFailoverToGemini(ctx, text, from, to, cb, false);
+                    } else cb.onError(t);
+                }
+            });
+        } else {
+            if (allowFailover) {
+                tryDeepLThenFailoverToGemini(ctx, text, from, to, cb, false);
+            } else {
+                cb.onError(new IllegalStateException("Gemini not configured"));
+            }
+        }
+    }
+
+    private static void tryGemini(Context ctx, String text, String from, String to, Callback cb) {
+        if (GeminiTranslationService.isConfigured()) {
+            GeminiTranslationService.translateWithAI(ctx, text, from, to, new GeminiTranslationService.Callback() {
+                @Override public void onSuccess(String translated) { cb.onSuccess(translated); }
+                @Override public void onError(Throwable t) { cb.onError(t); }
+            });
+        } else {
+            cb.onError(new IllegalStateException("No translator configured"));
+        }
+    }
+}
+
+
+--- C:\Users\abdukadir eksilmez\Desktop\whatslite\app\src\main\java\com\whatslite\service\SocketManager.java.FullName ---
+package com.whatslite.service;
+
+import android.util.Log;
+import io.socket.client.IO;
+import io.socket.client.Socket;
+
+public class SocketManager {
+    private static final String TAG = "SocketManager";
+    private Socket socket;
+
+    public void connect(String url) {
+        try {
+            socket = IO.socket(url);
+            socket.on(Socket.EVENT_CONNECT, args -> Log.d(TAG, "Connected"));
+            socket.connect();
+        } catch (Exception e) {
+            Log.e(TAG, "Socket connect error", e);
+        }
+    }
+
+    public void disconnect() {
+        try {
+            if (socket != null) socket.disconnect();
+        } catch (Exception ignored) {}
+    }
+}
+
+
+--- C:\Users\abdukadir eksilmez\Desktop\whatslite\app\src\main\java\com\whatslite\service\TextPreprocessor.java.FullName ---
+package com.whatslite.service;
+
+import android.os.Build;
+import android.util.Log;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.regex.Pattern;
+
+public class TextPreprocessor {
+    private static final String TAG = "TextPreprocessor";
+    
+    // TÃ¼rkÃ§e karakter dÃ¼zeltmeleri
+    private static final Map<String, String> TURKISH_FIXES = new HashMap<>();
+    static {
+        // YaygÄ±n yazÄ±m hatalarÄ±
+        TURKISH_FIXES.put("oylemi", "Ã¶yle mi");
+        TURKISH_FIXES.put("nasilsin", "nasÄ±lsÄ±n");
+        TURKISH_FIXES.put("nasilsÄ±n", "nasÄ±lsÄ±n");
+        TURKISH_FIXES.put("nasÄ±lsÄ±n", "nasÄ±lsÄ±n");
+        TURKISH_FIXES.put("naber", "ne haber");
+        TURKISH_FIXES.put("slm", "selam");
+        TURKISH_FIXES.put("selm", "selam");
+        TURKISH_FIXES.put("mrhb", "merhaba");
+        TURKISH_FIXES.put("mrb", "merhaba");
+        TURKISH_FIXES.put("tmm", "tamam");
+        TURKISH_FIXES.put("tamamdÄ±r", "tamam");
+        TURKISH_FIXES.put("olr", "olur");
+        TURKISH_FIXES.put("iyidir", "iyi");
+        TURKISH_FIXES.put("iyiyim", "iyiyim");
+        TURKISH_FIXES.put("teÅŸekkÃ¼rler", "teÅŸekkÃ¼r ederim");
+        TURKISH_FIXES.put("tÅŸk", "teÅŸekkÃ¼r ederim");
+        TURKISH_FIXES.put("tÅŸkrlr", "teÅŸekkÃ¼r ederim");
+        TURKISH_FIXES.put("gÃ¶rÃ¼ÅŸÃ¼rÃ¼z", "gÃ¶rÃ¼ÅŸÃ¼rÃ¼z");
+        TURKISH_FIXES.put("gÃ¶rÃ¼ÅŸÃ¼rz", "gÃ¶rÃ¼ÅŸÃ¼rÃ¼z");
+        TURKISH_FIXES.put("gln", "gÃ¼len");
+        TURKISH_FIXES.put("knk", "kanka");
+        
+        // Ä°/i, Ãœ/Ã¼, Ä/g, Å/s, Ã‡/c, Ã–/o dÃ¼zeltmeleri
+        TURKISH_FIXES.put("gercekten", "gerÃ§ekten");
+        TURKISH_FIXES.put("cogunlukla", "Ã§oÄŸunlukla");
+        TURKISH_FIXES.put("bugun", "bugÃ¼n");
+        TURKISH_FIXES.put("dun", "dÃ¼n");
+        TURKISH_FIXES.put("yarin", "yarÄ±n");
+        TURKISH_FIXES.put("aksamusic", "akÅŸam Ã¼stÃ¼");
+        TURKISH_FIXES.put("aksam", "akÅŸam");
+        TURKISH_FIXES.put("sabahleyin", "sabahleyin");
+        TURKISH_FIXES.put("oglen", "Ã¶ÄŸlen");
+        TURKISH_FIXES.put("ogleden", "Ã¶ÄŸleden");
+    }
+    
+    // Ä°ngilizce casual fixes
+    private static final Map<String, String> ENGLISH_FIXES = new HashMap<>();
+    static {
+        ENGLISH_FIXES.put("u", "you");
+        ENGLISH_FIXES.put("ur", "your");
+        ENGLISH_FIXES.put("r", "are");
+        ENGLISH_FIXES.put("n", "and");
+        ENGLISH_FIXES.put("thx", "thanks");
+        ENGLISH_FIXES.put("ty", "thank you");
+        ENGLISH_FIXES.put("np", "no problem");
+        ENGLISH_FIXES.put("omg", "oh my god");
+        ENGLISH_FIXES.put("lol", "laugh out loud");
+        ENGLISH_FIXES.put("brb", "be right back");
+        ENGLISH_FIXES.put("gtg", "got to go");
+        ENGLISH_FIXES.put("ttyl", "talk to you later");
+        ENGLISH_FIXES.put("hru", "how are you");
+        ENGLISH_FIXES.put("wbu", "what about you");
+        ENGLISH_FIXES.put("tbh", "to be honest");
+        ENGLISH_FIXES.put("imo", "in my opinion");
+        ENGLISH_FIXES.put("btw", "by the way");
+        ENGLISH_FIXES.put("fyi", "for your information");
+    }
+    
+    /**
+     * Metni Ã§eviri iÃ§in hazÄ±rlar - yazÄ±m hatalarÄ±nÄ± dÃ¼zeltir
+     */
+    public static String preprocessText(String text, String language) {
+        if (text == null || text.trim().isEmpty()) {
+            return text;
+        }
+        
+        Log.d(TAG, "ğŸ”§ Preprocessing text (" + language + "): " + text);
+        
+        String processed = text.trim().toLowerCase();
+        
+        // Dile gÃ¶re dÃ¼zeltmeler
+        if ("tr".equals(language)) {
+            processed = fixTurkish(processed);
+        } else if ("en".equals(language)) {
+            processed = fixEnglish(processed);
+        }
+        
+        // Genel dÃ¼zeltmeler
+        processed = generalFixes(processed);
+        
+        Log.d(TAG, "âœ… Preprocessed result: " + processed);
+        
+        return processed;
+    }
+    
+    private static String fixTurkish(String text) {
+        String fixed = text;
+        
+        // YaygÄ±n TÃ¼rkÃ§e hatalarÄ±nÄ± dÃ¼zelt
+        for (Map.Entry<String, String> entry : TURKISH_FIXES.entrySet()) {
+            fixed = fixed.replaceAll("\\b" + Pattern.quote(entry.getKey()) + "\\b", entry.getValue());
+        }
+        
+        // TÃ¼rkÃ§e karakter eksikliklerini akÄ±llÄ± dÃ¼zelt
+        fixed = smartTurkishCharacters(fixed);
+        
+        return fixed;
+    }
+    
+    private static String fixEnglish(String text) {
+        String fixed = text;
+        
+        // Ä°ngilizce casual language dÃ¼zelt
+        for (Map.Entry<String, String> entry : ENGLISH_FIXES.entrySet()) {
+            fixed = fixed.replaceAll("\\b" + Pattern.quote(entry.getKey()) + "\\b", entry.getValue());
+        }
+        
+        return fixed;
+    }
+    
+    private static String smartTurkishCharacters(String text) {
+        // AkÄ±llÄ± TÃ¼rkÃ§e karakter dÃ¼zeltmeleri
+        String fixed = text;
+        
+        // Context-aware dÃ¼zeltmeler
+        fixed = fixed.replaceAll("\\bgÄ±l\\b", "gil"); // "gel" iÃ§in
+        fixed = fixed.replaceAll("\\bgeliyorum\\b", "geliyorum");
+        fixed = fixed.replaceAll("\\bgidiyorum\\b", "gidiyorum");
+        fixed = fixed.replaceAll("\\biÅŸi\\b", "iÅŸ");
+        fixed = fixed.replaceAll("\\bÃ¶yle\\b", "Ã¶yle");
+        fixed = fixed.replaceAll("\\bÃ§ok\\b", "Ã§ok");
+        
+        return fixed;
+    }
+    
+    private static String generalFixes(String text) {
+        String fixed = text;
+        
+        // Ã‡oklu boÅŸluklarÄ± dÃ¼zelt
+        fixed = fixed.replaceAll("\\s+", " ");
+        
+        // Noktalama iÅŸaretlerini dÃ¼zelt
+        fixed = fixed.replaceAll("([.!?])([a-zA-Z])", "$1 $2");
+        
+        // BaÅŸlangÄ±Ã§ harfini bÃ¼yÃ¼k yap
+        if (fixed.length() > 0) {
+            fixed = fixed.substring(0, 1).toUpperCase() + fixed.substring(1);
+        }
+        
+        return fixed.trim();
+    }
+    
+    /**
+     * Metinon quality score hesaplar (0-100)
+     */
+    public static int calculateTextQuality(String text) {
+        if (text == null || text.trim().isEmpty()) return 0;
+        
+        int score = 100;
+        
+        // Ã‡ok kÄ±sa metinler iÃ§in dÃ¼ÅŸÃ¼k skor
+        if (text.length() < 3) score -= 30;
+        
+        // Sadece harf olmayan karakterler
+        if (!text.matches(".*[a-zA-ZÃ§ÄŸÄ±Ã¶ÅŸÃ¼Ã‡ÄIÃ–ÅÃœ].*")) score -= 50;
+        
+        // Ã‡ok fazla yazÄ±m hatasÄ± (heuristic)
+        long spaceCount = 0;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            spaceCount = text.chars().filter(ch -> ch == ' ').count();
+        }
+        long wordCount = spaceCount + 1;
+        if (text.length() / wordCount > 15) score -= 20; // Ã‡ok uzun kelimeler
+        
+        return Math.max(0, Math.min(100, score));
+    }
+}
+
+--- C:\Users\abdukadir eksilmez\Desktop\whatslite\app\src\main\java\com\whatslite\service\TranslationService.java.FullName ---
+package com.whatslite.service;
+
+import android.content.Context;
+import android.os.Handler;
+import android.os.Looper;
+
+import org.json.JSONArray;
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.net.URLEncoder;
+
+public class TranslationService {
+
+    public interface Callback {
+        void onSuccess(String translated);
+        void onError(String message);
+    }
+
+    public static void translateAsync(Context ctx, String text, String from, String to, Callback cb) {
+        new Thread(() -> {
+            try {
+                String translated = translate(text, from, to);
+                new Handler(Looper.getMainLooper()).post(() -> cb.onSuccess(translated));
+            } catch (Exception e) {
+                new Handler(Looper.getMainLooper()).post(() -> cb.onError(e.getMessage()));
+            }
+        }).start();
+    }
+
+    private static String translate(String text, String from, String to) throws Exception {
+        String urlStr = "https://translate.googleapis.com/translate_a/single?client=gtx&dt=t&sl="
+                + URLEncoder.encode(from, "UTF-8")
+                + "&tl=" + URLEncoder.encode(to, "UTF-8")
+                + "&q=" + URLEncoder.encode(text, "UTF-8");
+
+        URL url = new URL(urlStr);
+        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+        conn.setConnectTimeout(12000);
+        conn.setReadTimeout(15000);
+        conn.setRequestMethod("GET");
+        conn.setDoInput(true);
+
+        int code = conn.getResponseCode();
+        if (code != 200) throw new RuntimeException("HTTP " + code);
+
+        BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+        StringBuilder sb = new StringBuilder();
+        for (String line; (line = br.readLine()) != null; ) sb.append(line);
+        br.close();
+        conn.disconnect();
+
+        JSONArray outer = new JSONArray(sb.toString());
+        JSONArray arr = outer.getJSONArray(0);
+        StringBuilder out = new StringBuilder();
+        for (int i = 0; i < arr.length(); i++) {
+            out.append(arr.getJSONArray(i).getString(0));
+        }
+        return out.toString();
+    }
+}
+
+
+--- C:\Users\abdukadir eksilmez\Desktop\whatslite\app\src\main\java\com\whatslite\translation\DeepLTranslator.java.FullName ---
+package com.whatslite.translation;
+
+import android.util.Log;
+
+import androidx.annotation.Nullable;
+
+import com.whatslite.BuildConfig;
+
+import org.json.JSONArray;
+import org.json.JSONObject;
+
+import okhttp3.MediaType;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.RequestBody;
+import okhttp3.Response;
+
+/** Basit DeepL istemcisi (form-encoded). */
+public class DeepLTranslator {
+
+    private static final MediaType FORM = MediaType.get("application/x-www-form-urlencoded; charset=utf-8");
+    private final OkHttpClient http = new OkHttpClient();
+
+    /**
+     * @param text Ã‡evrilecek metin
+     * @param targetLang Ã–rn: "TR", "EN", "DE"
+     * @param sourceLang (ops.) Ã–rn: "EN" â€“ boÅŸ bÄ±rakÄ±lÄ±rsa otomatik algÄ±lar
+     * @return Ã‡evrilmiÅŸ metin; hata halinde null
+     */
+    public @Nullable String translate(String text, String targetLang, @Nullable String sourceLang) {
+        try {
+            String key  = BuildConfig.DEEPL_API_KEY != null ? BuildConfig.DEEPL_API_KEY : "";
+            String base = BuildConfig.DEEPL_BASE_URL != null ? BuildConfig.DEEPL_BASE_URL : "https://api-free.deepl.com";
+            if (key.isEmpty() || text == null || text.trim().isEmpty()) return null;
+
+            StringBuilder sb = new StringBuilder();
+            sb.append("auth_key=").append(url(key));
+            sb.append("&text=").append(url(text));
+            sb.append("&target_lang=").append(url(targetLang.toUpperCase()));
+            if (sourceLang != null && !sourceLang.trim().isEmpty()) {
+                sb.append("&source_lang=").append(url(sourceLang.toUpperCase()));
+            }
+
+            Request req = new Request.Builder()
+                    .url(base + "/v2/translate")
+                    .post(RequestBody.create(sb.toString(), FORM))
+                    .build();
+
+            try (Response resp = http.newCall(req).execute()) {
+                if (!resp.isSuccessful()) {
+                    Log.e("DeepL", "HTTP " + resp.code() + ": " + (resp.body()!=null?resp.body().string():""));
+                    return null;
+                }
+                String body = resp.body() != null ? resp.body().string() : "";
+                JSONObject json = new JSONObject(body);
+                JSONArray arr = json.getJSONArray("translations");
+                if (arr.length() == 0) return null;
+                return arr.getJSONObject(0).getString("text");
+            }
+        } catch (Exception e) {
+            Log.e("DeepL", "translate error", e);
+            return null;
+        }
+    }
+
+    private static String url(String s) {
+        try { return java.net.URLEncoder.encode(s, "UTF-8"); } catch (Exception e) { return ""; }
+    }
+}
+
+
+--- C:\Users\abdukadir eksilmez\Desktop\whatslite\app\src\main\java\com\whatslite\ui\ChatActivity.java.FullName ---
+package com.whatslite.ui;
+
+import android.content.SharedPreferences;
+import android.os.Bundle;
+import android.text.TextUtils;
+import android.view.Gravity;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.EditText;
+import android.widget.ImageButton;
+import android.widget.LinearLayout;
+import android.widget.Toast;
+
+import androidx.annotation.Nullable;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
+
+import com.whatslite.adapter.MessagesAdapter;
+import com.whatslite.model.Message;
+import com.whatslite.service.FirebaseManager;
+
+import java.util.Date;
+
+public class ChatActivity extends AppCompatActivity implements MessagesAdapter.MessageActionListener {
+
+    private RecyclerView rv;
+    private EditText et;
+    private ImageButton btn;
+
+    private MessagesAdapter adapter;
+    private FirebaseManager fm;
+
+    private String myNick;
+    private String peerNick;
+    private String roomId;
+
+    @Override
+    protected void onCreate(@Nullable Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+
+        // Basit programatik UI
+        LinearLayout root = new LinearLayout(this);
+        root.setOrientation(LinearLayout.VERTICAL);
+        root.setLayoutParams(new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+
+        rv = new RecyclerView(this);
+        LinearLayoutManager lm = new LinearLayoutManager(this);
+        lm.setStackFromEnd(true);
+        rv.setLayoutManager(lm);
+        root.addView(rv, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
+
+        LinearLayout bar = new LinearLayout(this);
+        bar.setOrientation(LinearLayout.HORIZONTAL);
+        int p = dp(12);
+        bar.setPadding(p, dp(8), p, dp(8));
+
+        et = new EditText(this);
+        et.setHint("Mesaj yazÄ±nâ€¦");
+        et.setMaxLines(4);
+        bar.addView(et, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+
+        btn = new ImageButton(this);
+        btn.setImageResource(android.R.drawable.ic_menu_send);
+        btn.setBackground(null);
+        LinearLayout.LayoutParams blp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        blp.gravity = Gravity.CENTER_VERTICAL;
+        bar.addView(btn, blp);
+
+        root.addView(bar, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+
+        setContentView(root);
+
+        // Prefs: kendim
+        SharedPreferences prefs = getSharedPreferences("ChatTranslator", MODE_PRIVATE);
+        myNick = prefs.getString("nickname", "");
+
+        // KarÅŸÄ± taraf
+        peerNick = getIntent().getStringExtra("peerNickname");
+        if (TextUtils.isEmpty(peerNick)) {
+            String peerUid = getIntent().getStringExtra("peerUid");
+            peerNick = (peerUid != null && !peerUid.trim().isEmpty()) ? peerUid : "unknown";
+        }
+
+        // Oda kimliÄŸi
+        roomId = FirebaseManager.roomIdFor(myNick, peerNick);
+
+        // Firebase
+        fm = FirebaseManager.getInstance();
+        fm.setContext(this);
+
+        // Adapter (myUid hazÄ±r deÄŸilse geÃ§ici)
+        adapter = new MessagesAdapter(fm.getMyUid() == null ? "temp" : fm.getMyUid(), this);
+        rv.setAdapter(adapter);
+
+        // OdayÄ± dinle: DUPLICATE ENGELÄ° => pushKey ile upsert
+        fm.startListeningRoom(roomId, dto -> runOnUiThread(() -> {
+            Message m = new Message();
+            m.chatRoomId = roomId;
+            m.text = dto.text == null ? "" : dto.text;
+            m.senderId = dto.senderId == null ? "" : dto.senderId;
+            m.timestamp = dto.timestamp == 0L ? new Date().getTime() : dto.timestamp;
+            m.translatedText = dto.translatedText;
+            m.targetLanguage = dto.targetLanguage;
+            String myUid = fm.getMyUid();
+            m.isFromMe = (myUid != null && myUid.equals(dto.senderId));
+            adapter.addOrUpdateWithKey(dto.id == null ? (m.senderId+"|"+m.timestamp+"|"+m.text.hashCode()) : dto.id, m);
+            rv.scrollToPosition(Math.max(0, adapter.getItemCount() - 1));
+        }));
+
+        // Inbox'Ä±mÄ± okundu yap (karÅŸÄ± taraf adÄ±na gelen satÄ±rdaki kÄ±rmÄ±zÄ± nokta vs)
+        fm.markInboxRead(peerNick);
+
+        // GÃ¶nder butonu â€“ SADECE Firebaseâ€™e yaz, adapterâ€™e ELLE ekleme (Ã§iftlenme biter)
+        btn.setOnClickListener(v -> {
+            String t = et.getText().toString().trim();
+            if (t.isEmpty()) return;
+            fm.sendMessage(roomId, t, peerNick, (ok, err) -> runOnUiThread(() -> {
+                if (ok) et.setText("");
+                else Toast.makeText(this, "GÃ¶nderilemedi: " + err, Toast.LENGTH_SHORT).show();
+            }));
+        });
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        fm.markInboxRead(peerNick);
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        if (fm != null) fm.stopListeningRoom();
+    }
+
+    private int dp(int v) { return (int) (v * getResources().getDisplayMetrics().density); }
+
+    @Override public void onMessageLongClick(Message m, View anchor) { /* menÃ¼ vs. */ }
+}
+
+
+--- C:\Users\abdukadir eksilmez\Desktop\whatslite\app\src\main\java\com\whatslite\ui\ChatListActivity.java.FullName ---
+package com.whatslite.ui;
+
+import android.content.Intent;
+import android.os.Bundle;
+import android.view.Gravity;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.LinearLayout;
+import android.widget.TextView;
+import android.widget.Button;
+
+import androidx.annotation.NonNull;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.recyclerview.widget.DividerItemDecoration;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
+
+import com.whatslite.database.ChatDatabase;
+import com.whatslite.database.ContactDao;
+import com.whatslite.model.Contact;
+
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * Basit sohbet listesi ekranÄ±.
+ *
+ * NOT: Bu sÃ¼rÃ¼mde FirebaseManager.InboxItem KULLANILMIYOR.
+ * Sadece yerel Room "contacts" tablosundaki kiÅŸiler listelenir.
+ * Bir kiÅŸiye tÄ±klayÄ±nca ChatActivity aÃ§Ä±lÄ±r.
+ */
+public class ChatListActivity extends AppCompatActivity {
+
+    private RecyclerView rv;
+    private View emptyView;
+    private Adapter adapter;
+    private ContactDao contactDao;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+
+        // ---- Programatik sade UI (layout dosyasÄ±na ihtiyaÃ§ yok) ----
+        LinearLayout root = new LinearLayout(this);
+        root.setOrientation(LinearLayout.VERTICAL);
+        int pad = dp(16);
+        root.setPadding(pad, pad, pad, pad);
+
+        TextView title = new TextView(this);
+        title.setText("Chats");
+        title.setTextSize(20);
+        title.setPadding(0, 0, 0, dp(8));
+        root.addView(title, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT
+        ));
+
+        rv = new RecyclerView(this);
+        rv.setLayoutManager(new LinearLayoutManager(this));
+        rv.addItemDecoration(new DividerItemDecoration(this, RecyclerView.VERTICAL));
+        root.addView(rv, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f
+        ));
+
+        emptyView = new TextView(this);
+        ((TextView) emptyView).setText("No chats yet");
+        ((TextView) emptyView).setGravity(Gravity.CENTER);
+        ((TextView) emptyView).setTextSize(16);
+        emptyView.setVisibility(View.GONE);
+        root.addView(emptyView, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
+        ));
+
+        Button btnContacts = new Button(this);
+        btnContacts.setText("Open Contacts");
+        btnContacts.setOnClickListener(v ->
+                startActivity(new Intent(ChatListActivity.this, ContactsActivity.class)));
+        root.addView(btnContacts, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
+        ));
+
+        setContentView(root);
+        // -------------------------------------------------------------
+
+        adapter = new Adapter(item -> {
+            Intent it = new Intent(ChatListActivity.this, ChatActivity.class);
+            it.putExtra("peerNickname", item.originalNickname);
+            startActivity(it);
+        });
+        rv.setAdapter(adapter);
+
+        contactDao = ChatDatabase.getDatabase(this).contactDao();
+
+        // KiÅŸileri yÃ¼kle
+        loadContactsAsChats();
+    }
+
+    private void loadContactsAsChats() {
+        new Thread(() -> {
+            List<Contact> contacts = contactDao.getAllContactsSync();
+            List<Item> items = new ArrayList<>();
+            if (contacts != null) {
+                for (Contact c : contacts) {
+                    if (c == null || c.originalNickname == null) continue;
+                    Item it = new Item();
+                    it.originalNickname = c.originalNickname;
+                    it.displayName = (c.displayName != null && !c.displayName.trim().isEmpty())
+                            ? c.displayName : c.originalNickname;
+                    items.add(it);
+                }
+            }
+            runOnUiThread(() -> {
+                adapter.submit(items);
+                boolean empty = items.isEmpty();
+                emptyView.setVisibility(empty ? View.VISIBLE : View.GONE);
+                rv.setVisibility(empty ? View.GONE : View.VISIBLE);
+            });
+        }).start();
+    }
+
+    private int dp(int v) {
+        return (int) (v * getResources().getDisplayMetrics().density);
+    }
+
+    // ----------------- Basit model -----------------
+    static class Item {
+        String originalNickname;
+        String displayName;
+    }
+
+    // ----------------- Adapter -----------------
+    static class Adapter extends RecyclerView.Adapter<Adapter.VH> {
+
+        interface Click {
+            void onClick(@NonNull Item item);
+        }
+
+        private final List<Item> data = new ArrayList<>();
+        private final Click click;
+
+        Adapter(Click c) { this.click = c; }
+
+        void submit(List<Item> list) {
+            data.clear();
+            if (list != null) data.addAll(list);
+            notifyDataSetChanged();
+        }
+
+        @NonNull
+        @Override public VH onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+            LinearLayout row = new LinearLayout(parent.getContext());
+            row.setOrientation(LinearLayout.VERTICAL);
+            int pad = (int) (12 * parent.getResources().getDisplayMetrics().density);
+            row.setPadding(pad, pad, pad, pad);
+
+            TextView tvTop = new TextView(parent.getContext());
+            tvTop.setTextSize(16);
+            tvTop.setTag("top");
+            row.addView(tvTop, new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT
+            ));
+
+            TextView tvBottom = new TextView(parent.getContext());
+            tvBottom.setTextSize(12);
+            tvBottom.setAlpha(0.7f);
+            tvBottom.setTag("bottom");
+            row.addView(tvBottom, new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT
+            ));
+
+            return new VH(row, tvTop, tvBottom);
+        }
+
+        @Override public void onBindViewHolder(@NonNull VH h, int pos) {
+            Item it = data.get(pos);
+            h.top.setText(it.displayName);
+            h.bottom.setText("@" + it.originalNickname);
+            h.itemView.setOnClickListener(v -> {
+                if (click != null) click.onClick(it);
+            });
+        }
+
+        @Override public int getItemCount() { return data.size(); }
+
+        static class VH extends RecyclerView.ViewHolder {
+            final TextView top, bottom;
+            VH(@NonNull View itemView, TextView top, TextView bottom) {
+                super(itemView);
+                this.top = top;
+                this.bottom = bottom;
+            }
+        }
+    }
+}
+
+
+--- C:\Users\abdukadir eksilmez\Desktop\whatslite\app\src\main\java\com\whatslite\ui\ContactsActivity.java.FullName ---
+package com.whatslite.ui;
+
+import android.content.Intent;
+import android.os.Bundle;
+import android.text.TextUtils;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.EditText;
+import android.widget.ImageView;
+import android.widget.LinearLayout;
+import android.widget.Toast;
+import android.widget.TextView;
+
+import androidx.annotation.NonNull;
+import androidx.appcompat.app.AlertDialog;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.lifecycle.LiveData;
+import androidx.recyclerview.widget.DividerItemDecoration;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
+
+import com.google.android.material.floatingactionbutton.FloatingActionButton;
+
+import com.whatslite.R;
+import com.whatslite.database.ChatDatabase;
+import com.whatslite.database.ContactDao;
+import com.whatslite.model.Contact;
+import com.whatslite.service.FirebaseManager;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+
+/**
+ * KiÅŸiler ekranÄ± (SON HAL):
+ *  - Liste YEREL Room tablosundan gelir (LiveData ile anÄ±nda gÃ¼ncellenir).
+ *  - Firebase /users yalnÄ±zca durum (online/dil) zenginleÅŸtirmesi iÃ§in okunur.
+ *  - BÃ¶ylece kiÅŸi ekleyince ANINDA gÃ¶rÃ¼nÃ¼r; karÅŸÄ± taraf daha eklememiÅŸ olsa bile.
+ */
+public class ContactsActivity extends AppCompatActivity implements FirebaseManager.FirebaseListener {
+
+    private RecyclerView rv;
+    private View emptyState;
+    private FloatingActionButton fabAdd;
+
+    private UsersAdapter adapter;
+
+    private ContactDao contactDao;
+    private FirebaseManager fm;
+
+    // Yerel veriler (LiveData ile gÃ¼ncellenir)
+    private List<Contact> localContacts = new ArrayList<>();
+
+    // Firebase durum zenginleÅŸtirmesi iÃ§in: nick -> user
+    private final Map<String, FirebaseManager.ChatUser> usersByNick = new HashMap<>();
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_contacts);
+
+        rv         = findViewById(R.id.recyclerContacts);
+        emptyState = findViewById(R.id.emptyStateLayout);
+        fabAdd     = findViewById(R.id.fabAddContact);
+
+        LinearLayoutManager lm = new LinearLayoutManager(this);
+        rv.setLayoutManager(lm);
+        rv.addItemDecoration(new DividerItemDecoration(this, lm.getOrientation()));
+
+        adapter = new UsersAdapter(nick -> openChat(nick));
+        rv.setAdapter(adapter);
+
+        // DB
+        contactDao = ChatDatabase.get(this).contactDao();
+
+        // Firebase
+        fm = FirebaseManager.getInstance();
+        fm.setContext(this);
+        fm.addListener(this);
+        fm.startUsersListener(); // sadece durum iÃ§in (online/lang)
+
+        // Yerel Contact listesini reaktif izle -> anÄ±nda listeyi yenile
+        LiveData<List<Contact>> live = contactDao.getAllContacts();
+        live.observe(this, contacts -> {
+            localContacts = (contacts == null) ? new ArrayList<>() : contacts;
+            rebuildAndSubmit(); // Firebase durum bilgisiyle zenginleÅŸtir
+        });
+
+        // KiÅŸi ekle
+        fabAdd.setOnClickListener(v -> showAddContactDialog());
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        if (fm != null) {
+            fm.removeListener(this);
+            fm.stopUsersListener();
+        }
+    }
+
+    // ===== Firebase Listener =====
+
+    @Override public void onUsersListeningStarted() {}
+    @Override public void onUsersListeningStopped() {}
+
+    @Override
+    public void onUserListUpdated(@NonNull List<FirebaseManager.ChatUser> users) {
+        // Gelen tÃ¼m kullanÄ±cÄ±larÄ± haritaya koy (normalize edilmiÅŸ nick ile)
+        usersByNick.clear();
+        for (FirebaseManager.ChatUser u : users) {
+            if (u == null || u.nickname == null) continue;
+            usersByNick.put(normalize(u.nickname), u);
+        }
+        // Yerel liste deÄŸiÅŸmemiÅŸ olsa bile durum bilgisi deÄŸiÅŸmiÅŸ olabilir -> yeniden kur
+        runOnUiThread(this::rebuildAndSubmit);
+    }
+
+    // ===== YardÄ±mcÄ±lar =====
+
+    private void rebuildAndSubmit() {
+        // localContacts'Ä± tek tek satÄ±ra Ã§evir; varsa usersByNick ile zenginleÅŸtir
+        List<Row> rows = new ArrayList<>();
+        String myNick = normalize(fm.getMyNickname());
+
+        for (Contact c : localContacts) {
+            if (c == null || c.originalNickname == null) continue;
+            String nick = normalize(c.originalNickname);
+
+            // KENDÄ°MÄ° listeleme (istenmiyor)
+            if (!TextUtils.isEmpty(myNick) && myNick.equals(nick)) continue;
+
+            FirebaseManager.ChatUser u = usersByNick.get(nick);
+
+            Row r = new Row();
+            r.originalNickname = c.originalNickname;
+            r.displayName = c.getDisplayNameOrOriginal();
+            // Dil: Firebase varsa onu, yoksa contact.language
+            String lang = (u != null && !TextUtils.isEmpty(u.language)) ? u.language
+                         : (TextUtils.isEmpty(c.language) ? "â€”" : c.language);
+            r.subtitle = "@" + c.originalNickname + " â€¢ " + lang;
+            r.online = (u != null && u.isOnline);
+
+            rows.add(r);
+        }
+
+        adapter.submit(rows);
+        updateEmptyState();
+    }
+
+    private void updateEmptyState() {
+        boolean empty = adapter.getItemCount() == 0;
+        emptyState.setVisibility(empty ? View.VISIBLE : View.GONE);
+        rv.setVisibility(empty ? View.GONE : View.VISIBLE);
+    }
+
+    private void openChat(String peerNickname) {
+        if (TextUtils.isEmpty(peerNickname)) return;
+        Intent i = new Intent(this, ChatActivity.class);
+        i.putExtra("peerNickname", peerNickname);
+        startActivity(i);
+    }
+
+    private static String normalize(String s) {
+        if (s == null) return "";
+        String t = s.trim();
+        if (t.startsWith("@")) t = t.substring(1);
+        return t.toLowerCase(Locale.ROOT);
+    }
+
+    private int dp(int v) {
+        return (int) (v * getResources().getDisplayMetrics().density);
+    }
+
+    // ===== KiÅŸi Ekle Dialogu =====
+    private void showAddContactDialog() {
+        LinearLayout root = new LinearLayout(this);
+        root.setOrientation(LinearLayout.VERTICAL);
+        int pad = dp(16);
+        root.setPadding(pad, pad, pad, pad);
+
+        final EditText etNick = new EditText(this);
+        etNick.setHint("Nickname");
+        root.addView(etNick, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+
+        final EditText etDisplay = new EditText(this);
+        etDisplay.setHint("Display name (optional)");
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        lp.topMargin = dp(8);
+        root.addView(etDisplay, lp);
+
+        new AlertDialog.Builder(this)
+                .setTitle("Add contact")
+                .setView(root)
+                .setNegativeButton("Cancel", null)
+                .setPositiveButton("Add", (d, w) -> {
+                    String raw = etNick.getText().toString().trim();
+                    if (raw.isEmpty()) {
+                        Toast.makeText(this, "Please enter a nickname", Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+                    String nickNorm = normalize(raw);
+
+                    // Kendini ekleme
+                    String myNickNorm = normalize(fm.getMyNickname());
+                    if (!TextUtils.isEmpty(myNickNorm) && myNickNorm.equals(nickNorm)) {
+                        Toast.makeText(this, "You cannot add yourself", Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+
+                    String disp = etDisplay.getText().toString().trim();
+
+                    // DB iÅŸlemleri arka threadâ€™de
+                    new Thread(() -> {
+                        // Case-insensitive varlÄ±k kontrolÃ¼
+                        int exists = contactDao.isContactExistsCI(nickNorm);
+                        if (exists > 0) {
+                            runOnUiThread(() ->
+                                    Toast.makeText(this, "This contact already exists", Toast.LENGTH_SHORT).show());
+                            return;
+                        }
+
+                        // Kaydet (Contact ctor: (originalNickname, displayName, language))
+                        Contact c = new Contact(nickNorm, disp, "");
+                        contactDao.insertContact(c);
+
+                        // LiveData zaten gÃ¶zlemliyor -> otomatik liste yenilenecek
+                        runOnUiThread(() ->
+                                Toast.makeText(this, "Contact added", Toast.LENGTH_SHORT).show());
+                    }).start();
+                })
+                .show();
+    }
+
+    // ===== GÃ¶rsel satÄ±r modeli =====
+    static class Row {
+        String originalNickname;
+        String displayName;
+        String subtitle; // @nick â€¢ lang
+        boolean online;
+    }
+
+    // ===== Adapter =====
+    static class UsersAdapter extends RecyclerView.Adapter<UsersAdapter.VH> {
+
+        interface Click { void onClick(@NonNull String originalNickname); }
+
+        private final List<Row> data = new ArrayList<>();
+        private final Click click;
+
+        UsersAdapter(Click c) { this.click = c; }
+
+        void submit(List<Row> rows) {
+            data.clear();
+            if (rows != null) data.addAll(rows);
+            notifyDataSetChanged();
+        }
+
+        @NonNull @Override
+        public VH onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+            View v = LayoutInflater.from(parent.getContext())
+                    .inflate(R.layout.item_contact, parent, false);
+            return new VH(v);
+        }
+
+        @Override
+        public void onBindViewHolder(@NonNull VH h, int pos) {
+            Row r = data.get(pos);
+            h.tvName.setText(r.displayName == null ? r.originalNickname : r.displayName);
+            h.tvNick.setText(r.subtitle == null ? ("@" + r.originalNickname) : r.subtitle);
+            h.tvStatus.setText(r.online ? "Online" : "Offline");
+
+            View.OnClickListener open = v -> {
+                if (click != null) click.onClick(r.originalNickname);
+            };
+            h.itemView.setOnClickListener(open);
+            h.btnChat.setOnClickListener(open);
+        }
+
+        @Override public int getItemCount() { return data.size(); }
+
+        static class VH extends RecyclerView.ViewHolder {
+            TextView tvName, tvNick, tvStatus;
+            ImageView btnChat;
+            VH(@NonNull View v) {
+                super(v);
+                tvName   = v.findViewById(R.id.tvContactName);
+                tvNick   = v.findViewById(R.id.tvContactNickname);
+                tvStatus = v.findViewById(R.id.tvOnlineStatus);
+                btnChat  = v.findViewById(R.id.btnChat);
+            }
+        }
+    }
+}
+
+
+--- C:\Users\abdukadir eksilmez\Desktop\whatslite\app\src\main\java\com\whatslite\ui\MainActivity.java.FullName ---
+package com.whatslite.ui;
+
+import android.content.Intent;
+import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
+import android.os.Build;
+import android.os.Bundle;
+import android.text.TextUtils;
+import android.view.View;
+import android.widget.ArrayAdapter;
+import android.widget.Button;
+import android.widget.EditText;
+import android.widget.ProgressBar;
+import android.widget.Spinner;
+import android.widget.TextView;
+
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
+
+import com.whatslite.R;
+import com.whatslite.database.ChatDatabase;
+import com.whatslite.database.UserDao;
+import com.whatslite.model.User;
+import com.whatslite.service.FirebaseManager;
+import com.whatslite.utils.DebugUtils;
+
+public class MainActivity extends AppCompatActivity {
+
+    private EditText etNickname;
+    private Spinner spinnerLanguage;
+    private Button btnJoinChat;
+    private ProgressBar progressBar;
+    private TextView tvError;
+
+    private UserDao userDao;
+    private SharedPreferences prefs;
+    private FirebaseManager firebaseManager;
+
+    private static final int REQUEST_NOTIFICATION_PERMISSION = 1001;
+
+    private final String[] languages = {
+            "ğŸ‡¹ğŸ‡· TÃ¼rkÃ§e","ğŸ‡ºğŸ‡¸ English","ğŸ‡ªğŸ‡¸ EspaÃ±ol","ğŸ‡«ğŸ‡· FranÃ§ais","ğŸ‡©ğŸ‡ª Deutsch","ğŸ‡®ğŸ‡¹ Italiano",
+            "ğŸ‡µğŸ‡¹ PortuguÃªs","ğŸ‡·ğŸ‡º Ğ ÑƒÑÑĞºĞ¸Ğ¹","ğŸ‡¸ğŸ‡¦ Ø§Ù„Ø¹Ø±Ø¨ÙŠØ©","ğŸ‡¨ğŸ‡³ ä¸­æ–‡","ğŸ‡¯ğŸ‡µ æ—¥æœ¬èª","ğŸ‡°ğŸ‡· í•œêµ­ì–´",
+            "ğŸ‡³ğŸ‡± Nederlands","ğŸ‡¸ğŸ‡ª Svenska","ğŸ‡³ğŸ‡´ Norsk","ğŸ‡©ğŸ‡° Dansk","ğŸ‡«ğŸ‡® Suomi","ğŸ‡¬ğŸ‡· Î•Î»Î»Î·Î½Î¹ÎºÎ¬",
+            "ğŸ‡®ğŸ‡³ à¤¹à¤¿à¤¨à¥à¤¦à¥€","ğŸ‡¹ğŸ‡­ à¹„à¸—à¸¢","ğŸ‡»ğŸ‡³ Tiáº¿ng Viá»‡t","ğŸ‡µğŸ‡± Polski","ğŸ‡¨ğŸ‡¿ ÄŒeÅ¡tina","ğŸ‡­ğŸ‡º Magyar",
+            "ğŸ‡·ğŸ‡´ RomÃ¢nÄƒ","ğŸ‡§ğŸ‡¬ Ğ‘ÑŠĞ»Ğ³Ğ°Ñ€ÑĞºĞ¸","ğŸ‡­ğŸ‡· Hrvatski","ğŸ‡¸ğŸ‡Œ SlovenÄina","ğŸ‡¸ğŸ‡® SlovenÅ¡Äina",
+            "ğŸ‡ºğŸ‡¦ Ğ£ĞºÑ€Ğ°Ñ—Ğ½ÑÑŒĞºĞ°","ğŸ‡®ğŸ‡· ÙØ§Ø±Ø³ÛŒ","ğŸ‡®ğŸ‡± ×¢×‘×¨×™×ª","ğŸ‡µğŸ‡° Ø§Ø±Ø¯Ùˆ","ğŸ‡§ğŸ‡© à¦¬à¦¾à¦‚à¦²à¦¾","ğŸ‡²ğŸ‡¾ Bahasa Malaysia",
+            "ğŸ‡®ğŸ‡© Bahasa Indonesia","ğŸ‡µğŸ‡­ Filipino","ğŸ‡ªğŸ‡ª Eesti","ğŸ‡±ğŸ‡» LatvieÅ¡u","ğŸ‡±ğŸ‡¹ LietuviÅ³"
+    };
+    private final String[] languageCodes = {
+            "tr","en","es","fr","de","it","pt","ru","ar","zh","ja","ko",
+            "nl","sv","no","da","fi","el","hi","th","vi","pl","cs","hu",
+            "ro","bg","hr","sk","sl","uk","fa","he","ur","bn","ms","id","tl","et","lv","lt"
+    };
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+
+        prefs = getSharedPreferences("ChatTranslator", MODE_PRIVATE);
+        String savedNickname = prefs.getString("nickname", null);
+
+        // Zaten giriÅŸ yaptÄ±ysa doÄŸrudan KiÅŸiler ekranÄ±na
+        if (savedNickname != null) {
+            startActivity(new Intent(this, ContactsActivity.class));
+            finish();
+            return;
+        }
+
+        setContentView(R.layout.activity_main);
+
+        userDao = ChatDatabase.getDatabase(this).userDao();
+        firebaseManager = FirebaseManager.getInstance();
+        firebaseManager.setContext(this);
+
+        initViews();
+        setupLanguageSpinner();
+        setupJoinButton();
+        requestNotificationPermission();
+
+        DebugUtils.checkFirebaseConnection();
+    }
+
+    private void initViews() {
+        etNickname = findViewById(R.id.etNickname);
+        spinnerLanguage = findViewById(R.id.spinnerLanguage);
+        btnJoinChat = findViewById(R.id.btnJoinChat);
+        progressBar = findViewById(R.id.progressBar);
+        tvError = findViewById(R.id.tvError);
+    }
+
+    private void setupLanguageSpinner() {
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, languages);
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        spinnerLanguage.setAdapter(adapter);
+        spinnerLanguage.setSelection(0);
+    }
+
+    private void setupJoinButton() {
+        btnJoinChat.setOnClickListener(v -> joinChat());
+    }
+
+    private void joinChat() {
+        String nickname = etNickname.getText().toString().trim();
+        if (TextUtils.isEmpty(nickname)) {
+            showError("Please enter a nickname");
+            return;
+        }
+        String normalizedNickname = normalizeNickname(nickname);
+        if (normalizedNickname.length() < 3) {
+            showError("Nickname must be at least 3 characters");
+            return;
+        }
+
+        showLoading(true);
+
+        new Thread(() -> {
+            boolean isAvailable = userDao.isNicknameExists(normalizedNickname) == 0;
+            runOnUiThread(() -> {
+                showLoading(false);
+                if (isAvailable) {
+                    String selectedLanguage = languageCodes[spinnerLanguage.getSelectedItemPosition()];
+
+                    new Thread(() -> {
+                        User user = new User(normalizedNickname, selectedLanguage);
+                        user.isOnline = true;
+                        userDao.insertUser(user);
+                    }).start();
+
+                    prefs.edit()
+                            .putString("nickname", normalizedNickname)
+                            .putString("language", selectedLanguage)
+                            .apply();
+
+                    DebugUtils.logUserJoin(normalizedNickname, selectedLanguage);
+                    firebaseManager.joinChat(normalizedNickname, selectedLanguage);
+
+                    // >>> Token'Ä± yazdÄ±r (Ã–NEMLÄ°) <<<
+                    com.whatslite.service.MyFirebaseMessagingService
+                            .registerCurrentToken(getApplicationContext(), normalizedNickname);
+
+                    // KiÅŸiler ekranÄ±na geÃ§
+                    Intent intent = new Intent(MainActivity.this, ContactsActivity.class);
+                    startActivity(intent);
+                    finish();
+                } else {
+                    showError("This nickname is already taken. Please choose another one.");
+                }
+            });
+        }).start();
+    }
+
+    private void showLoading(boolean show) {
+        progressBar.setVisibility(show ? View.VISIBLE : View.GONE);
+        btnJoinChat.setEnabled(!show);
+        etNickname.setEnabled(!show);
+        spinnerLanguage.setEnabled(!show);
+    }
+
+    private void showError(String message) {
+        tvError.setText(message);
+        tvError.setVisibility(View.VISIBLE);
+    }
+
+    private void requestNotificationPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.POST_NOTIFICATIONS)
+                    != PackageManager.PERMISSION_GRANTED) {
+                ActivityCompat.requestPermissions(
+                        this,
+                        new String[]{android.Manifest.permission.POST_NOTIFICATIONS},
+                        REQUEST_NOTIFICATION_PERMISSION
+                );
+            }
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+    }
+
+    /** '@' varsa at, trim + lowercase */
+    private String normalizeNickname(String nickname) {
+        if (nickname == null || nickname.trim().isEmpty()) return "";
+        String n = nickname.trim();
+        if (n.startsWith("@")) n = n.substring(1);
+        return n.toLowerCase();
+    }
+}
+
+
+--- C:\Users\abdukadir eksilmez\Desktop\whatslite\app\src\main\java\com\whatslite\ui\SettingsActivity.java.FullName ---
+package com.whatslite.ui;
+
+import android.os.Bundle;
+import android.view.ViewGroup;
+import android.widget.LinearLayout;
+import android.widget.TextView;
+
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.ContextCompat;
+
+import com.whatslite.R;
+
+/**
+ * Basit bir Settings ekranÄ± (programatik UI).
+ * Ä°Ã§inde ÅŸimdilik yalnÄ±zca bir baÅŸlÄ±k var; ileride ayarlar ekleyebilirsin.
+ * Bu sÄ±nÄ±f MUTLAKA SettingsActivity.java dosyasÄ±nda olmalÄ±.
+ */
+public class SettingsActivity extends AppCompatActivity {
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+
+        LinearLayout root = new LinearLayout(this);
+        root.setOrientation(LinearLayout.VERTICAL);
+        int pad = (int) (16 * getResources().getDisplayMetrics().density);
+        root.setPadding(pad, pad, pad, pad);
+
+        TextView title = new TextView(this);
+        title.setText("Settings");
+        title.setTextSize(20f);
+        title.setTextColor(ContextCompat.getColor(this, R.color.text_primary));
+
+        root.addView(title, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+        ));
+
+        setContentView(root);
+    }
+}
+
+
+--- C:\Users\abdukadir eksilmez\Desktop\whatslite\app\src\main\java\com\whatslite\utils\DebugUtils.java.FullName ---
+package com.whatslite.utils;
+
+import android.util.Log;
+import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.ValueEventListener;
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
+
+public class DebugUtils {
+    private static final String TAG = "DEBUG_FIREBASE";
+    
+    public static void checkFirebaseConnection() {
+        Log.d(TAG, "=== FIREBASE CONNECTION TEST ===");
+        
+        // Test Firebase connection
+        DatabaseReference connectedRef = FirebaseDatabase.getInstance().getReference(".info/connected");
+        connectedRef.addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot snapshot) {
+                boolean connected = snapshot.getValue(Boolean.class);
+                Log.d(TAG, "Firebase Connected: " + connected);
+                
+                if (connected) {
+                    Log.d(TAG, "âœ… Firebase connection is WORKING");
+                } else {
+                    Log.e(TAG, "âŒ Firebase connection is FAILED");
+                }
+            }
+            
+            @Override
+            public void onCancelled(DatabaseError error) {
+                Log.e(TAG, "âŒ Firebase connection listener cancelled: " + error.getMessage());
+            }
+        });
+        
+        // Test database read/write
+        testDatabaseReadWrite();
+    }
+    
+    private static void testDatabaseReadWrite() {
+        DatabaseReference testRef = FirebaseDatabase.getInstance().getReference("debug_test");
+        
+        // Write test data
+        testRef.setValue("test_" + System.currentTimeMillis())
+            .addOnSuccessListener(aVoid -> {
+                Log.d(TAG, "âœ… Firebase WRITE successful");
+            })
+            .addOnFailureListener(e -> {
+                Log.e(TAG, "âŒ Firebase WRITE failed: " + e.getMessage());
+            });
+        
+        // Read test data
+        testRef.addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot dataSnapshot) {
+                String value = dataSnapshot.getValue(String.class);
+                Log.d(TAG, "âœ… Firebase READ successful: " + value);
+            }
+            
+            @Override
+            public void onCancelled(DatabaseError databaseError) {
+                Log.e(TAG, "âŒ Firebase READ failed: " + databaseError.getMessage());
+            }
+        });
+    }
+    
+    public static void logUserJoin(String nickname, String language) {
+        Log.d(TAG, "=== USER JOIN ATTEMPT ===");
+        Log.d(TAG, "Nickname: " + nickname);
+        Log.d(TAG, "Language: " + language);
+        Log.d(TAG, "Timestamp: " + System.currentTimeMillis());
+    }
+    
+    public static void logUserList(int userCount) {
+        Log.d(TAG, "=== USER LIST UPDATE ===");
+        Log.d(TAG, "Total users online: " + userCount);
+    }
+    
+    public static void logError(String operation, String error) {
+        Log.e(TAG, "=== ERROR IN " + operation + " ===");
+        Log.e(TAG, "Error: " + error);
+    }
+}
+
+
+--- C:\Users\abdukadir eksilmez\Desktop\whatslite\app\src\main\java\com\whatslite\utils\FirebaseDebugTest.java.FullName ---
+package com.whatslite.utils;
+
+import android.content.Context;
+import android.util.Log;
+
+import androidx.annotation.NonNull;
+
+import com.whatslite.service.FirebaseManager;
+
+public final class FirebaseDebugTest {
+
+    private static final String TAG = "FirebaseDebugTest";
+
+    private FirebaseDebugTest() {}
+
+    public static void sendSample(@NonNull Context ctx,
+                                  @NonNull String myNickname,
+                                  @NonNull String peerNickname) {
+        FirebaseManager fm = FirebaseManager.getInstance();
+        fm.setContext(ctx);
+
+        fm.joinChat(myNickname, "tr"); // ensureUsersNode GEREK YOK
+
+        String roomId = FirebaseManager.roomIdFor(myNickname, peerNickname);
+        fm.sendMessage(roomId, "Merhaba, test!", (ok, err) -> {
+            if (ok) Log.d(TAG, "Mesaj gÃ¶nderildi.");
+            else    Log.e(TAG, "GÃ¶nderim hatasÄ±: " + err);
+        });
+    }
+}
+
+
+--- C:\Users\abdukadir eksilmez\Desktop\whatslite\app\src\main\java\com\whatslite\utils\FirebaseTestUtils.java.FullName ---
+package com.whatslite.utils;
+
+import android.content.Context;
+import android.util.Log;
+
+import androidx.annotation.NonNull;
+
+import com.whatslite.service.FirebaseManager;
+
+public final class FirebaseTestUtils {
+
+    private static final String TAG = "FirebaseTestUtils";
+
+    private FirebaseTestUtils() {}
+
+    public static void sendOnce(@NonNull Context ctx,
+                                @NonNull String me,
+                                @NonNull String peer,
+                                @NonNull String text) {
+        FirebaseManager fm = FirebaseManager.getInstance();
+        fm.setContext(ctx);
+
+        fm.joinChat(me, "tr"); // ensureUsersNode GEREK YOK
+
+        String roomId = FirebaseManager.roomIdFor(me, peer);
+        fm.sendMessage(roomId, text, (ok, err) -> {
+            if (ok) Log.d(TAG, "Mesaj gÃ¶nderildi: " + text);
+            else    Log.e(TAG, "GÃ¶nderim hatasÄ±: " + err);
+        });
+    }
+}
+
+
+--- C:\Users\abdukadir eksilmez\Desktop\whatslite\app\src\main\java\com\whatslite\WhatsLiteApplication.java.FullName ---
+package com.whatslite;
+
+import android.app.Application;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.os.Build;
+import android.util.Log;
+
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
+
+public class WhatsLiteApplication extends Application {
+
+    public static final String CHANNEL_ID = "whatslite_default_channel";
+
+    @Override
+    public void onCreate() {
+        super.onCreate();
+
+        // 1) Bildirim kanalÄ± (Android 8.0+)
+        createDefaultNotificationChannel();
+
+        // 2) Firebase anonim oturum (telefon + emÃ¼latÃ¶r aynÄ± projeye baÄŸlansÄ±n)
+        ensureAnonymousSignIn();
+    }
+
+    private void createDefaultNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            String name = "WhatsLite Bildirimleri";
+            String desc = "Mesaj ve genel bildirim kanalÄ±";
+            int importance = NotificationManager.IMPORTANCE_DEFAULT;
+
+            NotificationChannel channel = new NotificationChannel(CHANNEL_ID, name, importance);
+            channel.setDescription(desc);
+
+            NotificationManager nm = getSystemService(NotificationManager.class);
+            if (nm != null) {
+                nm.createNotificationChannel(channel);
+                Log.d("APP", "NotificationChannel created: " + CHANNEL_ID);
+            } else {
+                Log.w("APP", "NotificationManager is null; channel not created");
+            }
+        }
+    }
+
+    private void ensureAnonymousSignIn() {
+        FirebaseAuth auth = FirebaseAuth.getInstance();
+        if (auth.getCurrentUser() == null) {
+            auth.signInAnonymously().addOnCompleteListener(t -> {
+                if (t.isSuccessful()) {
+                    FirebaseUser u = auth.getCurrentUser();
+                    Log.d("APP", "Anon sign-in OK. uid=" + (u != null ? u.getUid() : "null"));
+                } else {
+                    Log.e("APP", "Anon sign-in FAILED: ", t.getException());
+                }
+            });
+        } else {
+            Log.d("APP", "Already signed-in. uid=" + auth.getCurrentUser().getUid());
+        }
+    }
+}
+

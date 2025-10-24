@@ -8,6 +8,7 @@ import android.util.Log;
 
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
+import com.whatslite.BuildConfig; // DEBUG log için BuildConfig erişimi
 
 public class WhatsLiteApplication extends Application {
 
@@ -22,6 +23,16 @@ public class WhatsLiteApplication extends Application {
 
         // 2) Firebase anonim oturum (telefon + emülatör aynı projeye bağlansın)
         ensureAnonymousSignIn();
+
+        // 3) DEBUG: DeepL anahtarı user-level gradle.properties'ten okundu mu?
+        //    (Sadece debug derlemelerde log düşer)
+        if (BuildConfig.DEBUG) {
+            Log.d(
+                "APP",
+                "DeepL host=" + BuildConfig.DEEPL_API_HOST +
+                " | key_set=" + (BuildConfig.DEEPL_API_KEY != null && !BuildConfig.DEEPL_API_KEY.isEmpty())
+            );
+        }
     }
 
     private void createDefaultNotificationChannel() {

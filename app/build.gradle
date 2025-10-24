@@ -8,7 +8,7 @@ android {
     namespace 'com.whatslite'
     compileSdk 34
 
-    // DeepL değişkenleri (gradle.properties'ten okunur)
+    // DeepL değişkenleri (user-level ~/.gradle/gradle.properties veya %USERPROFILE%\.gradle\gradle.properties)
     def deeplKey  = project.hasProperty('DEEPL_API_KEY')  ? project.property('DEEPL_API_KEY')  : ""
     def deeplHost = project.hasProperty('DEEPL_API_HOST') ? project.property('DEEPL_API_HOST') : "api-free.deepl.com"
 
@@ -20,25 +20,33 @@ android {
         versionName "1.0"
         vectorDrawables { useSupportLibrary = true }
 
-        // DeepL için BuildConfig sabitleri
-        buildConfigField "String", "DEEPL_API_KEY", "\"${deeplKey}\""
-        buildConfigField "String", "DEEPL_API_HOST", "\"${deeplHost}\""
-        buildConfigField "String", "DEEPL_BASE_URL", "\"https://${deeplHost}\""
+        // NOT: BuildConfig alanlarını burada TANIMLAMIYORUZ.
+        // (release APK'ya sır gömülmesin diye buildTypes altında ayrı ayrı veriyoruz)
     }
 
     buildTypes {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+
+            // 🔒 Release'te anahtar BOŞ; host/base URL kalabilir
+            buildConfigField "String", "DEEPL_API_KEY", "\"\""
+            buildConfigField "String", "DEEPL_API_HOST", "\"${deeplHost}\""
+            buildConfigField "String", "DEEPL_BASE_URL", "\"https://${deeplHost}\""
         }
         debug {
             debuggable true
+
+            // 🧪 Debug'ta kullanıcı-yerel gradle.properties'den okunan anahtarı geçir
+            buildConfigField "String", "DEEPL_API_KEY", "\"${deeplKey}\""
+            buildConfigField "String", "DEEPL_API_HOST", "\"${deeplHost}\""
+            buildConfigField "String", "DEEPL_BASE_URL", "\"https://${deeplHost}\""
         }
     }
 
     buildFeatures {
         viewBinding true
-        dataBinding false     // ⬅️ Data Binding kapalı
+        dataBinding false
         buildConfig true
     }
 
@@ -86,7 +94,7 @@ dependencies {
     // Avatar
     implementation 'de.hdodenhof:circleimageview:3.1.0'
 
-    // Room (Java—annotationProcessor)
+    // Room (Java — annotationProcessor)
     implementation 'androidx.room:room-runtime:2.6.1'
     annotationProcessor 'androidx.room:room-compiler:2.6.1'
 
